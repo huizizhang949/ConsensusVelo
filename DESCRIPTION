@@ -1,11 +1,29 @@
 Package: ConsensusVelo
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Bayesian hierarchical model for RNA velocity analysis with a time-dependent transcription rate
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Author: person("Huizi", "Zhang", email = "H.Zhang-144@sms.ed.ac.uk",
+                  role = c("aut", "cre"))
+Maintainer: Huizi Zhang <H.Zhang-144@sms.ed.ac.uk>
+Description: This package implements a Bayesian model to infer RNA velocity based on single-cell RNA
+    sequencing data. The method considers a time-dependent transcription rate and non-trivial initial
+    conditions, generalizing the state-of-the-art dynamic model. Further, a post-processing step is 
+    performed to estimate a unified gene-shared latent time for each cell, using posterior summaries 
+    from independent fit of the genes.
+License: GPL (>= 2)
 Encoding: UTF-8
 LazyData: true
+Imports:
+    stats,
+    pbapply,
+    ggplot2,
+    msm,
+    coda,
+    tidyr,
+    shape,
+    scales,
+    rjags,
+    coda,
+    truncnorm,
+    truncdist
+RoxygenNote: 7.3.1

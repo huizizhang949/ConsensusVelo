@@ -62,7 +62,7 @@ Ws <- c(1, 5, seq(10,100,by=5))
 # plot absolute difference in entropy, conditional on a fixed D (or several Ds).
 plot_entropy(Ws = Ws, Ds = 500, mcmc_k = mcmc_k_result)
 
-# candidate values for W
+# candidate values for D
 Ds <- c(1, seq(100,1000,by=100))
 
 # plot absolute difference in moving average of log-posterior, conditional on a fixed W (or several Ws).

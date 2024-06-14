@@ -8,7 +8,7 @@
 #'
 #' @param x a cell-by-gene matrix. Each entry is the posterior mean of log gene-wise latent time, conditional on the state with a larger posterior probability \code{(k.mode)}.
 #' @param k.mode a cell-by-gene matrix. Each entry is the state (induction: 1, repression: 2) with a larger posterior probability.
-#' @param var.logt an array \code{[cell, gene, state]} of posterior variance of log gene-wise latent time, each state.
+#' @param var.logt an array \code{[cell, gene, state]} of posterior variance of log gene-wise latent time, for each state.
 #' @param p.hat an array \code{[cell, gene, state]} of posterior probability of belonging to each state for each cell in each gene.
 #' @param n_chains number of chains to run.
 #' @param niter integer. Total number of MCMC iterations.

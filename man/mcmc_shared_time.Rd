@@ -20,7 +20,7 @@ mcmc_shared_time(
 
 \item{k.mode}{a cell-by-gene matrix. Each entry is the state (induction: 1, repression: 2) with a larger posterior probability.}
 
-\item{var.logt}{an array \code{[cell, gene, state]} of posterior variance of log gene-wise latent time, each state.}
+\item{var.logt}{an array \code{[cell, gene, state]} of posterior variance of log gene-wise latent time, for each state.}
 
 \item{p.hat}{an array \code{[cell, gene, state]} of posterior probability of belonging to each state for each cell in each gene.}
 

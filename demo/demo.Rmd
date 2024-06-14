@@ -251,7 +251,7 @@ ggplot(data = data.frame(u=u.obs[,g],s=s.obs[,g],t=shared_time_median))+
 Finally, we apply a point estimate for $\beta$ to adjust all the parameters and compute the predicted velocities across genes. This can be visualized on a PCA space through:
 
 ```{r}
-# combined_all_gene - a list of results for all gene. Each item is the output from function result_combine
+# combined_all_genes - a list of results for all genes. Each item is the output from function result_combine
 velocity_pca(combined_all_genes = combined_all_genes, post_result = post_result,
              groups = rep(c('blue','yellow'),each=200),
              u.obs = u.obs, s.obs = s.obs,

@@ -14,7 +14,8 @@ conditions. A post-processing step is also provided to combine
 information across genes and estimate a gene-shared latent time, which
 facilitaes interpretation of cell temporal orders with uncertainty.
 
-A full demo for how to use the R package is provided in here.
+A full demo for how to use the R package is provided in
+[here](https://github.com/huizizhang949/ConsensusVelo/blob/main/demo/demo.Rmd).
 
 You can install the development version of chdp from
 [GitHub](https://github.com/) with:

@@ -252,6 +252,7 @@ Finally, we apply a point estimate for $\beta$ to adjust all the parameters and 
 
 ```{r}
 # combined_all_genes - a list of results for all genes. Each item is the output from function result_combine
+# if there is information for cell categories, providing it to argument 'groups' will color the cells
 velocity_pca(combined_all_genes = combined_all_genes, post_result = post_result,
              groups = rep(c('blue','yellow'),each=200),
              u.obs = u.obs, s.obs = s.obs,

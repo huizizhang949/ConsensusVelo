@@ -21,8 +21,8 @@
 #' @export
 #'
 #' @examples
-#' post_result <- mcmc_shared_time(x = y, k.mode = k.mode, var.logt = var.logt, p.hat = p.hat, n_chains = 3,
-#'     niter = 200, burn_in = 100, thinning = 1)
+#' post_result <- mcmc_shared_time(x = y, k.mode = k.mode, var.logt = var.logt,
+#'   p.hat = p.hat, n_chains = 3, niter = 200, burn_in = 100, thinning = 1)
 mcmc_shared_time <- function(x, k.mode, var.logt, p.hat, n_chains, niter, burn_in=0, thinning=1){
 
   y <- x

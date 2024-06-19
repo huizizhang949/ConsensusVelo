@@ -26,7 +26,8 @@
 #' @export
 #'
 #' @examples
-#' empirical <- get_empirical(u.obs = u.obs, s.obs = s.obs, u.quant = c(0.35,0.8), s.quant = c(0.35,0.8), alpha='max')
+#' empirical <- get_empirical(u.obs = u.obs, s.obs = s.obs,
+#'   u.quant = c(0.35,0.8), s.quant = c(0.35,0.8), alpha='max')
 get_empirical <- function(u.obs,s.obs,u.quant,s.quant,alpha='max',
                           epsilon=1e-3,plot=TRUE){
 
@@ -105,7 +106,8 @@ get_empirical <- function(u.obs,s.obs,u.quant,s.quant,alpha='max',
 #' @export
 #'
 #' @examples
-#' k.inits1 <- generate_k(u.obs = u.obs, s.obs = s.obs, empirical = empirical, n_inits = 50, type = 'centre')
+#' k.inits1 <- generate_k(u.obs = u.obs, s.obs = s.obs, empirical = empirical,
+#'   n_inits = 50, type = 'centre')
 generate_k <- function(u.obs, s.obs, empirical, n_inits=50, type='min', plot=TRUE){
 
   k.hat.4 <- empirical$k.hat.4

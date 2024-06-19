@@ -158,7 +158,8 @@ result_combine <- function(consensus_result, Width, ind, hyper=FALSE){
 #' @export
 #'
 #' @examples
-#' plot_fit(combined_result = combined, u.obs = u.obs, s.obs = s.obs, thinning = 10, title = 'Example', cex = 1)
+#' plot_fit(combined_result = combined, u.obs = u.obs, s.obs = s.obs,
+#'   thinning = 10, title = 'Example', cex = 1)
 plot_fit <- function(combined_result, u.obs, s.obs, thinning=1, title=NULL, cex=1){
   # combined_result is the output of function 'result_combine', a list of of length = no. of chains,
   # within each list, there are matrices for univariate parameters ('params'), for 'tau', 'mus', 'v', 't', 'k','hyper'

@@ -68,8 +68,9 @@ ppc_single <- function(u.obs, s.obs, combined_result){
 #'
 #' @examples
 #' set.seed(4)
-#' ppc_multiple(u.obs = u.obs, s.obs = s.obs, combined_result = combined, n_replicate = 1000, prob = c(0.005,0.995),
-#'     u.quant = c(0.35,0.8), s.quant = c(0.35,0.8), gamma.hat.obs = empirical$params$gamma.hat)
+#' ppc_multiple(u.obs = u.obs, s.obs = s.obs, combined_result = combined,
+#'   n_replicate = 1000, prob = c(0.005,0.995), u.quant = c(0.35,0.8),
+#'   s.quant = c(0.35,0.8), gamma.hat.obs = empirical$params$gamma.hat)
 ppc_multiple <- function(u.obs, s.obs, combined_result, n_replicate, prob = c(0.005,0.995),
                          u.quant = c(0.35,0.8), s.quant = c(0.35,0.8), gamma.hat.obs){
 
@@ -186,7 +187,8 @@ ppc_multiple <- function(u.obs, s.obs, combined_result, n_replicate, prob = c(0.
 #'
 #' @examples
 #' set.seed(134)
-#' ppp_values <- ppp_mixed(u.obs = u.obs, s.obs = s.obs, combined_result = combined, n_replicate = 1000, prob = 0.9)
+#' ppp_values <- ppp_mixed(u.obs = u.obs, s.obs = s.obs,
+#'   combined_result = combined, n_replicate = 1000, prob = 0.9)
 ppp_mixed <- function(u.obs, s.obs, combined_result, n_replicate, prob=0.9){
 
   combined_result_params <- do.call(rbind, lapply(combined_result, function(l) l$params))

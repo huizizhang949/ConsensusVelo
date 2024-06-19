@@ -47,6 +47,7 @@ replicates and observed data
 }
 \examples{
 set.seed(4)
-ppc_multiple(u.obs = u.obs, s.obs = s.obs, combined_result = combined, n_replicate = 1000, prob = c(0.005,0.995),
-    u.quant = c(0.35,0.8), s.quant = c(0.35,0.8), gamma.hat.obs = empirical$params$gamma.hat)
+ppc_multiple(u.obs = u.obs, s.obs = s.obs, combined_result = combined,
+  n_replicate = 1000, prob = c(0.005,0.995), u.quant = c(0.35,0.8),
+  s.quant = c(0.35,0.8), gamma.hat.obs = empirical$params$gamma.hat)
 }

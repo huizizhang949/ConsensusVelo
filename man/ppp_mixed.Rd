@@ -29,5 +29,6 @@ for each state separately, and based only on cells with a large posterior probab
 }
 \examples{
 set.seed(134)
-ppp_values <- ppp_mixed(u.obs = u.obs, s.obs = s.obs, combined_result = combined, n_replicate = 1000, prob = 0.9)
+ppp_values <- ppp_mixed(u.obs = u.obs, s.obs = s.obs,
+  combined_result = combined, n_replicate = 1000, prob = 0.9)
 }

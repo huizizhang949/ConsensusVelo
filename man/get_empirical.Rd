@@ -34,5 +34,6 @@ The output contains the following items:
 The funciton calculates empirical estimates for all parameters (excluding \eqn{\lambda}) based on the model with a constant transcription rate.
 }
 \examples{
-empirical <- get_empirical(u.obs = u.obs, s.obs = s.obs, u.quant = c(0.35,0.8), s.quant = c(0.35,0.8), alpha='max')
+empirical <- get_empirical(u.obs = u.obs, s.obs = s.obs,
+  u.quant = c(0.35,0.8), s.quant = c(0.35,0.8), alpha='max')
 }

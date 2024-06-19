@@ -5,9 +5,10 @@
 #' including a preparation step to find good initial values where states are fixed to empirical values.
 #'
 #' @import msm
-#' @importFrom stats dgamma pnorm pgamma rnorm runif
+#' @import graphics
+#' @importFrom stats dgamma pnorm pgamma rnorm runif dunif var prcomp density rbeta rgamma update
 #' @import ggplot2
-#'
+#' @importFrom utils setTxtProgressBar txtProgressBar
 #' @param u.obs a vector of observed unspliced counts.
 #' @param s.obs a vector of observed spliced counts.
 #' @param k.inits a matrix of initial values for the state. Each column corresponds to one set of initial values, with rows corresponding to cells.
@@ -59,10 +60,11 @@
 #' @examples
 #' set.seed(4343)
 #' seed <- sample(1:1e5,size=Width)
-#' consensus_result <- velo_consens(u.obs = u.obs, s.obs = s.obs, k.inits = k.inits, empirical = empirical,
-#'     epsilon = 1e-3, alpha1.sd = 5, gamma.sd = 0.4, t0.sd = 3, lambda.lower = 0.3, lambda.upper = 8,
-#'     seed = seed, prep_niter = 10, prep_burn_in = 0, prep_thinning = 1,
-#'     comp_niter = Depth, comp_burn_in = 0, comp_thinning = 1, n_cores = 3, n_chains = Width)
+#' consensus_result <- velo_consens(u.obs = u.obs, s.obs = s.obs,
+#'   k.inits = k.inits, empirical = empirical, epsilon = 1e-3, alpha1.sd = 5,
+#'   gamma.sd = 0.4, t0.sd = 3, lambda.lower = 0.3, lambda.upper = 8,
+#'   seed = seed, prep_niter = 10, prep_burn_in = 0, prep_thinning = 1,
+#'   comp_niter = Depth, comp_burn_in = 0, comp_thinning = 1, n_cores = 3, n_chains = Width)
 velo_consens <- function(u.obs, s.obs, k.inits, empirical, epsilon=1e-3,
                          alpha1.sd, gamma.sd, t0.sd, lambda.lower=0, lambda.upper=8,
                          seed, prep_niter, prep_burn_in=0, prep_thinning=1,

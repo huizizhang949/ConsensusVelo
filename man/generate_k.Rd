@@ -27,5 +27,6 @@ a matrix of initial values. Each column corresponds to one set of initial values
 The function generates initial values for states for uncertains that will be used when running multiple chains, based on two different ways.
 }
 \examples{
-k.inits1 <- generate_k(u.obs = u.obs, s.obs = s.obs, empirical = empirical, n_inits = 50, type = 'centre')
+k.inits1 <- generate_k(u.obs = u.obs, s.obs = s.obs, empirical = empirical,
+  n_inits = 50, type = 'centre')
 }

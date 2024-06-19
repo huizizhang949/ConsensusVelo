@@ -41,6 +41,6 @@ for \eqn{j=1,2}, for each cell \eqn{c} and gene \eqn{g}.
 This function uses posterior summaries from fitting individual genes to estimate a shared latent time and splicing rate.
 }
 \examples{
-post_result <- mcmc_shared_time(x = y, k.mode = k.mode, var.logt = var.logt, p.hat = p.hat, n_chains = 3,
-    niter = 200, burn_in = 100, thinning = 1)
+post_result <- mcmc_shared_time(x = y, k.mode = k.mode, var.logt = var.logt,
+  p.hat = p.hat, n_chains = 3, niter = 200, burn_in = 100, thinning = 1)
 }

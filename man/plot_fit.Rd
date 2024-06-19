@@ -26,5 +26,6 @@ a phase portrait with samples for fitted lines in grey.
 This function plots the posterior samples for fitted phase portrait.
 }
 \examples{
-plot_fit(combined_result = combined, u.obs = u.obs, s.obs = s.obs, thinning = 10, title = 'Example', cex = 1)
+plot_fit(combined_result = combined, u.obs = u.obs, s.obs = s.obs,
+  thinning = 10, title = 'Example', cex = 1)
 }

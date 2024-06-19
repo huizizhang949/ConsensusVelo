@@ -73,8 +73,9 @@ including a preparation step to find good initial values where states are fixed 
 \examples{
 set.seed(4343)
 seed <- sample(1:1e5,size=Width)
-consensus_result <- velo_consens(u.obs = u.obs, s.obs = s.obs, k.inits = k.inits, empirical = empirical,
-    epsilon = 1e-3, alpha1.sd = 5, gamma.sd = 0.4, t0.sd = 3, lambda.lower = 0.3, lambda.upper = 8,
-    seed = seed, prep_niter = 10, prep_burn_in = 0, prep_thinning = 1,
-    comp_niter = Depth, comp_burn_in = 0, comp_thinning = 1, n_cores = 3, n_chains = Width)
+consensus_result <- velo_consens(u.obs = u.obs, s.obs = s.obs,
+  k.inits = k.inits, empirical = empirical, epsilon = 1e-3, alpha1.sd = 5,
+  gamma.sd = 0.4, t0.sd = 3, lambda.lower = 0.3, lambda.upper = 8,
+  seed = seed, prep_niter = 10, prep_burn_in = 0, prep_thinning = 1,
+  comp_niter = Depth, comp_burn_in = 0, comp_thinning = 1, n_cores = 3, n_chains = Width)
 }

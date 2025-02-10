@@ -36,7 +36,7 @@ velocity_pca(
 
 \item{cex}{see \code{par}.}
 
-\item{transparency}{level of transparancy added to the observed values (between 0 and 1).}
+\item{transparency}{level of transparency added to the observed values (between 0 and 1).}
 }
 \value{
 a plot with PC2 against PC1, overlaid by posterior samples for predicted velocities for selected cells (grey),

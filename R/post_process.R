@@ -310,7 +310,7 @@ shared_time_pca <- function(u.obs, s.obs, shared_time){
 #' @param obs_ind a vector of cell indices for which predicted velocities will be computed.
 #' @param thinning compute predicted velocity for thinned samples. The posterior mean is also based on thinned samples.
 #' @param cex see \code{par}.
-#' @param transparency level of transparancy added to the observed values (between 0 and 1).
+#' @param transparency level of transparency added to the observed values (between 0 and 1).
 #'
 #' @return a plot with PC2 against PC1, overlaid by posterior samples for predicted velocities for selected cells (grey),
 #' and posterior mean is shown in red arrows. If \code{groups} is provided, cells are colored based on the groups.
@@ -327,8 +327,8 @@ velocity_pca <- function(combined_all_genes, post_result, u.obs, s.obs, groups =
   post_result <- do.call(rbind, post_result)
 
   n <- nrow(u.obs); G <- ncol(s.obs); ccs <- obs_ind
-  # total number of iterations across chains
-  N <- nrow(post_result)
+  # total number of iterations across chains for single-gene results
+  N <- nrow(do.call(rbind, lapply(combined_all_genes[[1]], function(l) l$params)))
 
   # b=-log(beta)
   b_ind <- 1:G

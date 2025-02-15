@@ -4,7 +4,7 @@
 \alias{plot_fit}
 \title{Plot fitted phase portrait}
 \usage{
-plot_fit(combined_result, u.obs, s.obs, thinning = 1, title = NULL, cex = 1)
+plot_fit(combined_result, u.obs, s.obs, thinning = 1, title = "", cex = 1)
 }
 \arguments{
 \item{combined_result}{output from \code{result_combine}.}

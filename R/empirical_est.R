@@ -14,7 +14,6 @@
 #' @param epsilon a small positive value used to compute empirical \eqn{\tau}.
 #' @param plot if TRUE, plot empirical \eqn{\gamma} and empirical states.
 #'
-#' @usage get_empirical(u.obs, s.obs, u.quant, s.quant, alpha='max', epsilon=1e-3, plot=TRUE)
 #'
 #' @return The output contains the following items:
 #' \item{tau.hat}{a vector of empirical \eqn{\tau} for all cells.}
@@ -28,8 +27,7 @@
 #' @examples
 #' empirical <- get_empirical(u.obs = u.obs, s.obs = s.obs,
 #'   u.quant = c(0.35,0.8), s.quant = c(0.35,0.8), alpha='max')
-get_empirical <- function(u.obs,s.obs,u.quant,s.quant,alpha='max',
-                          epsilon=1e-3,plot=TRUE){
+get_empirical <- function(u.obs, s.obs, u.quant, s.quant, alpha='max', epsilon=1e-3, plot=TRUE){
 
   C <- length(u.obs)
 

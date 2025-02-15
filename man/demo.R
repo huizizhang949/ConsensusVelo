@@ -72,7 +72,7 @@ rm(k_lp_result)
 # candidate values for W
 Ws <- c(1, 2, 3)
 Ws <- c(1, 5, seq(10,100,by=5))
-
+Ws <- c(1,seq(2,10,by=2))
 # plot absolute difference in entropy, conditional on a fixed D (or several Ds).
 plot_entropy(Ws = Ws, Ds = 500, mcmc_k = mcmc_k_result)
 
@@ -91,7 +91,7 @@ load("~/Library/CloudStorage/OneDrive-UniversityofEdinburgh/Mac/Project/code/vel
 # there are matrices for univariate parameters ('params'),
 # for 'tau', 'mus', 'v', 't', 'k', 'hyper'
 # the rows for of every matrix correspond to samples, with nrow = length(ind)
-combined <- result_combine(consensus_result = consensus_result, Width = 3, ind = 900:1000)
+combined <- result_combine(consensus_result = consensus_result, Width = 10, ind = 900:1000)
 
 # to show fitted phase portrait (with some thinning)
 plot_fit(combined_result = combined, u.obs = u.obs, s.obs = s.obs, thinning = 10, title = 'Example', cex = 1)

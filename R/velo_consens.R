@@ -9,23 +9,18 @@
 #' @importFrom stats dgamma pnorm pgamma rnorm runif dunif var prcomp density rbeta rgamma update
 #' @import ggplot2
 #' @importFrom utils setTxtProgressBar txtProgressBar
+#'
 #' @param u.obs a vector of observed unspliced counts.
 #' @param s.obs a vector of observed spliced counts.
 #' @param state_inits a matrix of initial values for the state. Each column corresponds to one set of initial values, with rows corresponding to cells.
 #' Can use the output from \code{generate_k}.
 #' @param empirical output from \code{get_empirical}.
+#' @param mcmc a list of mcmc setup: number of iterations, thinning and burnin for the preparation step and complete algorithm.
 #' @param epsilon a small positive value used to compute empirical \eqn{\tau}. Better to use the same value as used in \code{get_empirical}.
-#' @param seed a vector of values used as seed for each chain. Must be of the same length as the number of chains.
-#' @param prep_niter,comp_niter integer. Total number of MCMC iterations for the preparation step and complete step.
-#' @param prep_burn_in,comp_burn_in the length of burn-in period during MCMC for the preparation step and complete step.
-#' @param prep_thinning,comp_thinning the thinning applied after burn-in period for the preparation step and complete step.
-#' @param n_cores number of cores used for parallel computing.
 #' @param n_chains number of chains to run.
+#' @param n_cores number of cores used for parallel computing.
+#' @param cluster_type see \code{makeCluster} for parallel omputing.
 #' @param verbose if TRUE, print the running time for the preparation step and complete algorithm for the first chain.
-#'
-#' @usage velo_consens(u.obs, s.obs, state_inits, empirical, epsilon=1e-3, alpha1.sd, gamma.sd, t0.sd,
-#'    lambda.lower=0, lambda.upper=8, seed, prep_niter, prep_burn_in=0, prep_thinning=1,
-#'    comp_niter, comp_burn_in=0, comp_thinning=1, n_cores=30, n_chains=100)
 #'
 #' @return The output is a list of results for all chains. Within each list, it contains the following components for each chain:
 #' \item{output_index}{total number of saved MCMC samples, taking into account of burn-in and thinning.}
@@ -59,10 +54,9 @@
 #'     comp_niter = Depth, comp_burn_in = 0, comp_thinning = 1)
 #' set.seed(1)
 #' consensus_result <- velo_consens(u.obs = u.obs, s.obs = s.obs, state_inits = k.inits,
-#'    empirical = empirical,mcmc = mcmc_list, epsilon = 1e-3, n_cores = 3, n_chains = Width)
-
-velo_consens <- function(u.obs, s.obs, state_inits, empirical, mcmc=list(), epsilon=1e-3, n_cores=NULL,
-                         n_chains=NULL, verbose=TRUE){
+#'    empirical = empirical, mcmc = mcmc_list, epsilon = 1e-3, n_cores = 3, n_chains = Width)
+velo_consens <- function(u.obs, s.obs, state_inits, empirical=list(), mcmc=list(), epsilon=1e-3,
+                         n_chains=NULL, n_cores=NULL, cluster_type='FORK', verbose=TRUE){
 
   # check input
   if(!is.vector(u.obs) || !is.vector(s.obs)) {stop("s and u must be a vector")}
@@ -136,7 +130,8 @@ velo_consens <- function(u.obs, s.obs, state_inits, empirical, mcmc=list(), epsi
   }
 
   # ---- run parallel chain ------
-  result <- pbapply::pblapply(1:n_chains, cl=n_cores, function(i){
+  cl <- parallel::makeCluster(n_cores,type=cluster_type)
+  result <- pbapply::pblapply(1:n_chains, cl=cl, function(i){
   # result <- lapply(1:n_chains, function(i){
 
     tryCatch({
@@ -239,7 +234,9 @@ velo_consens <- function(u.obs, s.obs, state_inits, empirical, mcmc=list(), epsi
       return(paste('Warning:',w))
     })
 
-  })
+  }) #end lapply
+
+  parallel::stopCluster(cl)
 
   return(result)
 

@@ -20,6 +20,7 @@ library(ConsensusVelo)
 The simulated data for fitting a single gene can be obtained from 
 
 ```{r}
+# sim.data contains the generated observations for a single gene
 u.obs <- sim.data$u.obs; s.obs <- sim.data$s.obs
 ```
 
@@ -53,31 +54,31 @@ k.inits <- cbind(k.inits1,k.inits2)[,rand_ind]
 Now to run consensus velocity:
 
 ```{r}
-# consensus velocity (in parallel: 3 cores)
-# number of chains
-Width <- 50
+# consensus velocity (in parallel: 5 cores)
+# number of chains ()
+Width <- 100
 # number of iterations
 Depth <- 5000
 
 # define other prior parameters, if not provided, default values will be used
-# standard deviations of alpha1, gamma and switching point
+## standard deviations of alpha1, gamma and switching point
 empirical$params$alpha1.sd=5
 empirical$params$gamma.sd=0.4
 empirical$params$t0.sd=3
-# upper and lower bound of lambda
+## upper and lower bound of lambda
 empirical$params$lambda.lower=0; empirical$params$lambda.upper=5
-# the parameter in the inverse-gamma prior for the two variance parameters: IG(invgamma.f, invgamma.f * empirical)
+## the parameter in the inverse-gamma prior for two variance parameters: IG(invgamma.f, invgamma.f * empirical)
 empirical$params$invgamma.f=1
-# the parameter in the prior for mu_tau (also for var_tau), control the variance: TruncN(mean, (hyper.f*mean)^2)
+## the parameter in the prior for mu_tau (also for var_tau), control the variance: TruncN(mean, (hyper.f*mean)^2)
 empirical$params$hyper.f=2
 
 # mcmc setup (if not provided, default values will be used)
-mcmc_list <- list(prep_niter = 1000, prep_burn_in = 500, prep_thinning = 1,
+mcmc_list <- list(prep_niter = 3000, prep_burn_in = 2000, prep_thinning = 1,
                   comp_niter = Depth, comp_burn_in = 0, comp_thinning = 1)
 
 set.seed(1)
 consensus_result <- velo_consens(u.obs = u.obs, s.obs = s.obs, state_inits = k.inits, empirical = empirical,
-                                 mcmc = mcmc_list, epsilon = 1e-3, n_cores = 3, n_chains = Width)
+                                 mcmc = mcmc_list, epsilon = 1e-3, n_cores = 5, n_chains = Width)
 ```
 
 To select a suitable value for $W$ and $D$ (number of chains and number of iterations), we compute entropy and moving average of log-posterior density:
@@ -151,7 +152,8 @@ The joint posterior distribution can also be examined between pairwise parameter
 # the parameter names can be one of the following
 # 'alpha1_1','gamma','lambda','t0','u01','sigma_u_2','sigma_s_2','p'
 # 't[1]', 't[2]', .....
-# 'tau[1]','tau[2], .....
+# 'tau[1]','tau[2]', .....
+# 'v[1]', 'v[2]', ....
 plot_distribution_2d(combined_result = combined, param1 = 't0', param2 = 'gamma')
 plot_distribution_2d(combined_result = combined, param1 = 't0', param2 = 't[100]')
 ```
@@ -171,8 +173,8 @@ ppc_single(u.obs = u.obs, s.obs = s.obs, combined_result = combined)
 # compare empirical gamma and quantiles
 set.seed(4)
 ppc_multiple(u.obs = u.obs, s.obs = s.obs, combined_result = combined, n_replicate = 200, prob = 0.95,
-             quantiles=seq(0.05,0.95,by=0.05),
-             u.quant = c(0.35,0.8), s.quant = c(0.35,0.8), gamma.hat.obs = empirical$params$gamma.hat)
+             quantiles = seq(0.05,0.95,by=0.05), u.quant = c(0.35,0.8), s.quant = c(0.35,0.8), 
+             gamma.hat.obs = empirical$params$gamma.hat)
 
 # the function plots histograms for ppp values and also outputs them, using mixed predictive distribution
 set.seed(134)
@@ -188,7 +190,7 @@ summaries from individual gene fit.
 ```{r}
 # we show an example on 26 genes with 400 cells. The data is stored in a cell-by-gene matrix
 u.obs <- post.summary$u.obs; s.obs <- post.summary$s.obs
-# the posterior summaries can be obtained as follows
+# the posterior summaries for can be obtained as follows
 # x - a cell-by-gene matrix. Each entry is the posterior mean of log gene-wise latent time, conditional on the state with a larger posterior probability (stored in k.mode).
 # k.mode - a cell-by-gene matrix. Each entry is the state (induction: 1, repression: 2) with a larger posterior probability.
 # var.logt - an array [cell, gene, state] of posterior variance of log gene-wise latent time, for each state.
@@ -204,7 +206,7 @@ The model can be fitted through the following:
 # the post-processing step is implemented using rjags
 # the output is a list of length = n_chains, within each list is a matrix
 # the row corresponds to each iteration, columns correspond to variables (mu_c, sigma_2_c, rho_c, b=-log(beta))
-post_result <- mcmc_shared_time(x = x, k.mode = k.mode, var.logt = var.logt, p.hat = p.hat, n_chains = 3,
+post_result <- mcmc_shared_time(x = x, k.mode = k.mode, var.logt = var.logt, p.hat = p.hat, n_chains = 2,
                                 niter = 200, burn_in = 100, thinning = 1)
 
 ```
@@ -221,6 +223,7 @@ The posterior samples of gene-shared latent time are obtained by
 ```{r}
 # to obtain posterior samples for shared time
 shared_time_samples <- get_shared_time(post_result = post_result, n = 400, G = 26)
+# traceplots
 plot(shared_time_samples, ask=T)
 ```
 
@@ -259,11 +262,10 @@ ggplot(data = data.frame(u=u.obs[,g],s=s.obs[,g],t=shared_time_median))+
 Finally, we apply a point estimate for $\beta$ to adjust all the parameters and compute the predicted velocities across genes. This can be visualized on a PCA space through:
 
 ```{r}
-# combined_all_genes - a list of results for all genes. Each item is the output from function result_combine
-# if there is information for cell categories, providing it to argument 'groups' will color the cells
+# combined_all_genes - a list of results for all genes. Each item is the output from the function result_combine()
+# if there is information for cell types, providing it to argument 'groups' will color the cells
 velocity_pca(combined_all_genes = combined_all_genes, post_result = post_result,
-             groups = rep(c('blue','yellow'),each=200),
-             u.obs = u.obs, s.obs = s.obs,
+             u.obs = u.obs, s.obs = s.obs, n_cores=2,
              obs_ind = seq(40,400,by=40), thinning = 1, cex = 0.2)
 ```
 

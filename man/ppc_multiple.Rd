@@ -29,7 +29,7 @@ ppc_multiple(
 
 \item{quantiles}{a vector of quantiles to compare between the replicates and true data.}
 
-\item{u.quant, s.quant}{a vector of two values for lower and upper quantiles to find
+\item{u.quant, s.quant}{each is a vector of two values for lower and upper quantiles to find
 empirical repression and induction steady states for unspliced and spliced counts. Should be the same as used in \code{get_empirical}.}
 
 \item{gamma.hat.obs}{empirical \eqn{\gamma} from the observed data.}

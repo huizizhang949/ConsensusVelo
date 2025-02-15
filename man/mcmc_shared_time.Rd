@@ -9,8 +9,8 @@ mcmc_shared_time(
   k.mode,
   var.logt,
   p.hat,
-  n_chains,
-  niter,
+  n_chains = 1,
+  niter = 1000,
   burn_in = 0,
   thinning = 1
 )

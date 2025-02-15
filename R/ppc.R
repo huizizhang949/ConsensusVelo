@@ -54,7 +54,7 @@ ppc_single <- function(u.obs, s.obs, combined_result){
 #' @param n_replicate number of replicates.
 #' @param prob the target probability of the credible interval.
 #' @param quantiles a vector of quantiles to compare between the replicates and true data.
-#' @param u.quant,s.quant a vector of two values for lower and upper quantiles to find
+#' @param u.quant,s.quant each is a vector of two values for lower and upper quantiles to find
 #' empirical repression and induction steady states for unspliced and spliced counts. Should be the same as used in \code{get_empirical}.
 #' @param gamma.hat.obs empirical \eqn{\gamma} from the observed data.
 #'
@@ -73,7 +73,7 @@ ppc_single <- function(u.obs, s.obs, combined_result){
 #'   n_replicate = 1000, prob = 0.95, quantiles=seq(0.05,0.95,by=0.05),
 #'   u.quant = c(0.35,0.8), s.quant = c(0.35,0.8), gamma.hat.obs = empirical$params$gamma.hat)
 ppc_multiple <- function(u.obs, s.obs, combined_result, n_replicate, prob = 0.95,
-                         quantiles=seq(0.05,0.95,by=0.05),
+                         quantiles = seq(0.05,0.95,by=0.05),
                          u.quant = c(0.35,0.8), s.quant = c(0.35,0.8), gamma.hat.obs){
 
   n <- length(u.obs)

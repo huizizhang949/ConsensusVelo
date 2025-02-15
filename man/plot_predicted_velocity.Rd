@@ -9,7 +9,7 @@ plot_predicted_velocity(
   u.obs,
   s.obs,
   delta = 1,
-  obs_ind,
+  obs_ind = NULL,
   thinning = 1,
   cex = 1,
   transparency = 1

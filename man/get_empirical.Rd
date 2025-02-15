@@ -4,7 +4,15 @@
 \alias{get_empirical}
 \title{Derive empirical estimates for parameters}
 \usage{
-get_empirical(u.obs, s.obs, u.quant, s.quant, alpha='max', epsilon=1e-3, plot=TRUE)
+get_empirical(
+  u.obs,
+  s.obs,
+  u.quant,
+  s.quant,
+  alpha = "max",
+  epsilon = 0.001,
+  plot = TRUE
+)
 }
 \arguments{
 \item{u.obs}{a vector of observed unspliced counts.}

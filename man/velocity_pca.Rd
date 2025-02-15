@@ -11,8 +11,10 @@ velocity_pca(
   s.obs,
   groups = NULL,
   delta = 1,
-  obs_ind,
+  obs_ind = NULL,
   thinning = 1,
+  n_cores = NULL,
+  cluster_type = "FORK",
   cex = 1,
   transparency = 1
 )
@@ -34,6 +36,10 @@ velocity_pca(
 
 \item{thinning}{compute predicted velocity for thinned samples. The posterior mean is also based on thinned samples.}
 
+\item{n_cores}{number of cores used for parallel computing.}
+
+\item{cluster_type}{see \code{makeCluster} for parallel omputing.}
+
 \item{cex}{see \code{par}.}
 
 \item{transparency}{level of transparency added to the observed values (between 0 and 1).}
@@ -44,7 +50,7 @@ and posterior mean is shown in red arrows. If \code{groups} is provided, cells a
 }
 \description{
 This function computes the posterior mean for the inverse of the splicing rate, which is then used to adjust all
-the parameters across genes. After rescaling,  the predicted velocities across genes are computed and then
+the parameters across genes. After rescaling, the predicted velocities across genes are computed and then
 visualized on the PCA space.
 }
 \examples{

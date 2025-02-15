@@ -9,9 +9,11 @@ plot_distribution_2d(combined_result, param1, param2)
 \arguments{
 \item{combined_result}{output from \code{result_combine}.}
 
-\item{param1}{name of the first parameter. Must be a character string used in \code{combined_result}.}
-
-\item{param2}{name of the second parameter. Must be a character string used in \code{combined_result}.}
+\item{param1, param2}{names of the parameters. Must be one of the following:
+1) gene-specific parameters 'alpha1_1','gamma','lambda','t0','u01','sigma_u_2','sigma_s_2','p'.
+2) latent time 't[1]', 't[2]',...
+3) local time 'tau[1]','tau[2]', ...
+4) velocity 'v[1]', 'v[2]', ...}
 }
 \value{
 a 2D kernel density estimation for joint posterior distributions.

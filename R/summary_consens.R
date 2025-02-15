@@ -21,7 +21,7 @@
 #'
 #' @examples
 #' combined <- result_combine(consensus_result = consensus_result, Width = 3, ind = 10:100)
-result_combine <- function(consensus_result, Width, ind, hyper=TRUE){
+result_combine <- function(consensus_result, Width, ind=NULL, hyper=TRUE){
 
   params <- c('alpha1_1','gamma','lambda','t0','u01','sigma_u_2','sigma_s_2','p','tau','mus','mu_tau','var_tau','k')
 
@@ -34,6 +34,8 @@ result_combine <- function(consensus_result, Width, ind, hyper=TRUE){
   # there are matrices for univariate parameters ('params'),
   # for 'tau', 'mus', 'v', 't', 'k', 'hyper'
   # nrow of every matrix = length(ind)
+
+  if(is.null(ind)) {ind <- 1:consensus_result[[1]]$output_index}
 
   all_result <- lapply(1:Width, function(w) {
 
@@ -160,7 +162,7 @@ result_combine <- function(consensus_result, Width, ind, hyper=TRUE){
 #' @examples
 #' plot_fit(combined_result = combined, u.obs = u.obs, s.obs = s.obs,
 #'   thinning = 10, title = 'Example', cex = 1)
-plot_fit <- function(combined_result, u.obs, s.obs, thinning=1, title=NULL, cex=1){
+plot_fit <- function(combined_result, u.obs, s.obs, thinning=1, title='', cex=1){
   # combined_result is the output of function 'result_combine', a list of of length = no. of chains,
   # within each list, there are matrices for univariate parameters ('params'), for 'tau', 'mus', 'v', 't', 'k','hyper'
 
@@ -210,10 +212,11 @@ plot_fit <- function(combined_result, u.obs, s.obs, thinning=1, title=NULL, cex=
 #' plot_predicted_velocity(combined_result = combined, u.obs = u.obs, s.obs = s.obs, delta = 1,
 #'     obs_ind = c(1,10,15,20,25,30,35,40,80,100,105,115,120),
 #'     thinning = 10, cex = 0.2, transparency = 0.5)
-plot_predicted_velocity <- function(combined_result, u.obs, s.obs, delta=1, obs_ind,
+plot_predicted_velocity <- function(combined_result, u.obs, s.obs, delta=1, obs_ind=NULL,
                                     thinning=1, cex=1, transparency=1){
 
   n <- length(u.obs)
+  if(is.null(obs_ind)) {obs_ind <- sample(1:n,size=min(c(5,n)))}
 
   combined_result_params <- do.call(rbind, lapply(combined, function(l) l$params))
   combined_result_means <- do.call(rbind, lapply(combined, function(l) l$mus))
@@ -316,8 +319,11 @@ plot_predicted_velocity <- function(combined_result, u.obs, s.obs, delta=1, obs_
 #'
 #'
 #' @param combined_result output from \code{result_combine}.
-#' @param param1 name of the first parameter. Must be a character string used in \code{combined_result}.
-#' @param param2 name of the second parameter. Must be a character string used in \code{combined_result}.
+#' @param param1,param2 names of the parameters. Must be one of the following:
+#' 1) gene-specific parameters 'alpha1_1','gamma','lambda','t0','u01','sigma_u_2','sigma_s_2','p'.
+#' 2) latent time 't[1]', 't[2]',...
+#' 3) local time 'tau[1]','tau[2]', ...
+#' 4) velocity 'v[1]', 'v[2]', ...
 #'
 #' @return a 2D kernel density estimation for joint posterior distributions.
 #' @export
@@ -327,10 +333,11 @@ plot_predicted_velocity <- function(combined_result, u.obs, s.obs, delta=1, obs_
 plot_distribution_2d <- function(combined_result, param1, param2){
 
   combined_result_params <- do.call(rbind, lapply(combined, function(l) l$params))
-  combined_result_tau <- do.call(rbind, lapply(combined, function(l) l$tau))
   combined_result_t <- do.call(rbind, lapply(combined, function(l) l$t))
+  combined_result_tau <- do.call(rbind, lapply(combined, function(l) l$tau))
+  combined_result_v <- do.call(rbind, lapply(combined, function(l) l$v))
 
-  all_mat <- cbind(combined_result_params, combined_result_t, combined_result_tau)
+  all_mat <- cbind(combined_result_params, combined_result_t, combined_result_tau, combined_result_v)
 
   g1 <- ggplot(data=data.frame(x=all_mat[,param1],y=all_mat[,param2]), aes(x=x, y=y) ) +
     stat_density_2d(aes(fill = after_stat(density)), geom = "raster", contour = FALSE) +

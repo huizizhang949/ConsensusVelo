@@ -4,9 +4,18 @@
 \alias{velo_consens}
 \title{Implement consensus velocity for inference of a single gene}
 \usage{
-velo_consens(u.obs, s.obs, state_inits, empirical, epsilon=1e-3, alpha1.sd, gamma.sd, t0.sd,
-   lambda.lower=0, lambda.upper=8, seed, prep_niter, prep_burn_in=0, prep_thinning=1,
-   comp_niter, comp_burn_in=0, comp_thinning=1, n_cores=30, n_chains=100)
+velo_consens(
+  u.obs,
+  s.obs,
+  state_inits,
+  empirical = list(),
+  mcmc = list(),
+  epsilon = 0.001,
+  n_chains = NULL,
+  n_cores = NULL,
+  cluster_type = "FORK",
+  verbose = TRUE
+)
 }
 \arguments{
 \item{u.obs}{a vector of observed unspliced counts.}
@@ -18,21 +27,17 @@ Can use the output from \code{generate_k}.}
 
 \item{empirical}{output from \code{get_empirical}.}
 
-\item{epsilon}{a small positive value used to compute empirical \eqn{\tau}. Better to use the same value as used in \code{get_empirical}.}
+\item{mcmc}{a list of mcmc setup: number of iterations, thinning and burnin for the preparation step and complete algorithm.}
 
-\item{n_cores}{number of cores used for parallel computing.}
+\item{epsilon}{a small positive value used to compute empirical \eqn{\tau}. Better to use the same value as used in \code{get_empirical}.}
 
 \item{n_chains}{number of chains to run.}
 
+\item{n_cores}{number of cores used for parallel computing.}
+
+\item{cluster_type}{see \code{makeCluster} for parallel omputing.}
+
 \item{verbose}{if TRUE, print the running time for the preparation step and complete algorithm for the first chain.}
-
-\item{seed}{a vector of values used as seed for each chain. Must be of the same length as the number of chains.}
-
-\item{prep_niter, comp_niter}{integer. Total number of MCMC iterations for the preparation step and complete step.}
-
-\item{prep_burn_in, comp_burn_in}{the length of burn-in period during MCMC for the preparation step and complete step.}
-
-\item{prep_thinning, comp_thinning}{the thinning applied after burn-in period for the preparation step and complete step.}
 }
 \value{
 The output is a list of results for all chains. Within each list, it contains the following components for each chain:
@@ -69,5 +74,5 @@ mcmc_list <- list(prep_niter = 1000, prep_burn_in = 500, prep_thinning = 1,
     comp_niter = Depth, comp_burn_in = 0, comp_thinning = 1)
 set.seed(1)
 consensus_result <- velo_consens(u.obs = u.obs, s.obs = s.obs, state_inits = k.inits,
-   empirical = empirical,mcmc = mcmc_list, epsilon = 1e-3, n_cores = 3, n_chains = Width)
+   empirical = empirical, mcmc = mcmc_list, epsilon = 1e-3, n_cores = 3, n_chains = Width)
 }

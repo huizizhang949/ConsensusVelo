@@ -23,7 +23,7 @@
 #' @examples
 #' post_result <- mcmc_shared_time(x = y, k.mode = k.mode, var.logt = var.logt,
 #'   p.hat = p.hat, n_chains = 3, niter = 200, burn_in = 100, thinning = 1)
-mcmc_shared_time <- function(x, k.mode, var.logt, p.hat, n_chains, niter, burn_in=0, thinning=1){
+mcmc_shared_time <- function(x, k.mode, var.logt, p.hat, n_chains=1, niter=1000, burn_in=0, thinning=1){
 
   y <- x
   n <- nrow(y); G <- ncol(y)
@@ -300,7 +300,7 @@ shared_time_pca <- function(u.obs, s.obs, shared_time){
 #'
 #' @description
 #' This function computes the posterior mean for the inverse of the splicing rate, which is then used to adjust all
-#' the parameters across genes. After rescaling,  the predicted velocities across genes are computed and then
+#' the parameters across genes. After rescaling, the predicted velocities across genes are computed and then
 #' visualized on the PCA space.
 #'
 #' @param combined_all_genes a list of results for all genes. Each item is the output from \code{result_combine} for a single gene.
@@ -311,6 +311,8 @@ shared_time_pca <- function(u.obs, s.obs, shared_time){
 #' @param delta a time increment to compute cell future position (default to 1).
 #' @param obs_ind a vector of cell indices for which predicted velocities will be computed.
 #' @param thinning compute predicted velocity for thinned samples. The posterior mean is also based on thinned samples.
+#' @param n_cores number of cores used for parallel computing.
+#' @param cluster_type see \code{makeCluster} for parallel omputing.
 #' @param cex see \code{par}.
 #' @param transparency level of transparency added to the observed values (between 0 and 1).
 #'
@@ -323,12 +325,17 @@ shared_time_pca <- function(u.obs, s.obs, shared_time){
 #'     groups = rep(c('blue','yellow'),each=200),
 #'     u.obs = u.obs, s.obs = s.obs, obs_ind = seq(40,400,by=40), thinning = 1, cex = 0.2)
 velocity_pca <- function(combined_all_genes, post_result, u.obs, s.obs, groups = NULL,
-                         delta=1, obs_ind, thinning=1, cex=1, transparency=1){
+                         delta = 1, obs_ind = NULL, thinning = 1,
+                         n_cores=NULL, cluster_type='FORK',
+                         cex = 1, transparency = 1){
+
+  if(is.null(n_cores)) {n_cores <- parallel::detectCores()-1}
 
   # combine samples into a single matrix
   post_result <- do.call(rbind, post_result)
 
-  n <- nrow(u.obs); G <- ncol(s.obs); ccs <- obs_ind
+  n <- nrow(u.obs); G <- ncol(s.obs); if(is.null(obs_ind)) {obs_ind <- sample(1:n,size=min(c(5,n)))}
+  ccs <- obs_ind
   # total number of iterations across chains for single-gene results
   N <- nrow(do.call(rbind, lapply(combined_all_genes[[1]], function(l) l$params)))
 
@@ -384,7 +391,10 @@ velocity_pca <- function(combined_all_genes, post_result, u.obs, s.obs, groups =
   }
   compute_mean_vec <- Vectorize(compute_mean_vec)
 
-  for (g in 1:G) {
+  # for (g in 1:G) {
+  cl <- parallel::makeCluster(n_cores,type=cluster_type)
+  delta_mus_all <- pbapply::pblapply(1:G, function(g) {
+
     combined_result_params <- do.call(rbind, lapply(combined_all_genes[[g]], function(l) l$params))
     combined_result_means <- do.call(rbind, lapply(combined_all_genes[[g]], function(l) l$mus))
     combined_result_u <- combined_result_means[,1:n]; combined_result_s <- combined_result_means[,(n+1):(2*n)]
@@ -396,7 +406,6 @@ velocity_pca <- function(combined_all_genes, post_result, u.obs, s.obs, groups =
     # second item is a matrix of dim = no. of iters *2, recording all the samples of u(t+1)-u(t), and s(t+1)-s(t)
     delta_mus <- lapply(ccs, function(cc) {
 
-      delta <- 1
       # dim = 2 * no. of iters
       t_future <- combined_result_t[ix,cc]*a_pmean[g]+delta
       k_future <- ifelse(t_future<=combined_result_params[ix,'t0']*a_pmean[g],1,2)
@@ -415,6 +424,11 @@ velocity_pca <- function(combined_all_genes, post_result, u.obs, s.obs, groups =
 
     })
 
+  })
+  parallel::stopCluster(cl)
+
+  for(g in 1:G){
+    delta_mus <- delta_mus_all[[g]]
     # a matrix of dim = no. of cells * 2, first column for E(u(t+1)-u(t)), second for E(s(t+1)-s(t))
     avg_delta <- do.call(rbind,lapply(delta_mus,function(l) l$avg))
     avg_delta_u_adj[,g] <- avg_delta[,1]; avg_delta_s_adj[,g] <- avg_delta[,2]
@@ -423,7 +437,6 @@ velocity_pca <- function(combined_all_genes, post_result, u.obs, s.obs, groups =
     delta_s_by_iter_adj[,g,] <- t(do.call(cbind,lapply(delta_mus,function(l) l$samples[,2])))
 
   }
-
   # ------ pca by concatenating u and s-------
 
   y_all <- cbind(s.obs,u.obs)

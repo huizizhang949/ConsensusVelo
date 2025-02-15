@@ -14,6 +14,7 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, eval = FALS
 ```{r}
 library(ggplot2)
 library(pheatmap)
+library(coda)
 library(ConsensusVelo)
 ```
 
@@ -24,14 +25,14 @@ The simulated data for fitting a single gene can be obtained from
 u.obs <- sim.data$u.obs; s.obs <- sim.data$s.obs
 ```
 
-To obtain empirical estimates:
+To obtain empirical estimates,
 
 ```{r}
 # get empirical estimates for parameters from the data
 empirical <- get_empirical(u.obs = u.obs, s.obs = s.obs, u.quant = c(0.35,0.8), s.quant = c(0.35,0.8), alpha='max')
 ```
 
-Before running consensus velocity algorithm, we need to prepare different initial values for the state to initialize each chain. This can be done by using the following code:
+Before running consensus velocity algorithm, we need to prepare different initial values for the state to initialize each chain. This can be done by the following.
 
 ```{r}
 # generate multiple initial values for state k
@@ -51,12 +52,12 @@ k.inits <- cbind(k.inits1,k.inits2)[,rand_ind]
 
 ## Consensus velocity
 
-Now to run consensus velocity:
+Now to run consensus velocity,
 
 ```{r}
-# consensus velocity (in parallel: 5 cores)
-# number of chains ()
-Width <- 100
+# consensus velocity (in parallel)
+# number of chains
+Width <- 50
 # number of iterations
 Depth <- 5000
 
@@ -81,7 +82,7 @@ consensus_result <- velo_consens(u.obs = u.obs, s.obs = s.obs, state_inits = k.i
                                  mcmc = mcmc_list, epsilon = 1e-3, n_cores = 5, n_chains = Width)
 ```
 
-To select a suitable value for $W$ and $D$ (number of chains and number of iterations), we compute entropy and moving average of log-posterior density:
+To select a suitable value for $W$ and $D$ (number of chains and number of iterations), we compute entropy and moving average of log-posterior density,
 
 ```{r}
 # get posterior samples for k and log-posterior
@@ -118,7 +119,7 @@ combined <- result_combine(consensus_result = consensus_result, Width = 50, ind 
 
 ```
 
-After collecting MCMC samples based on selected $W$ and $D$, we can check the fitted phase portrait, calculate posterior probability of belonging to the induction state for every cell, and predicted velocity:
+After collecting MCMC samples based on selected $W$ and $D$, we can check the fitted phase portrait, calculate posterior probability of belonging to the induction state for every cell, and predicted velocity.
 
 ```{r}
 # to show fitted phase portrait (with some thinning)
@@ -144,7 +145,7 @@ plot_predicted_velocity(combined_result = combined, u.obs = u.obs, s.obs = s.obs
 
 ```
 
-The joint posterior distribution can also be examined between pairwise parameters:
+The joint posterior distribution can also be examined between pairwise parameters.
 
 ```{r}
 # to check the joint posterior distribution between parameters and their correlation
@@ -207,7 +208,7 @@ The model can be fitted through the following:
 # the output is a list of length = n_chains, within each list is a matrix
 # the row corresponds to each iteration, columns correspond to variables (mu_c, sigma_2_c, rho_c, b=-log(beta))
 post_result <- mcmc_shared_time(x = x, k.mode = k.mode, var.logt = var.logt, p.hat = p.hat, n_chains = 2,
-                                niter = 200, burn_in = 100, thinning = 1)
+                                niter = 5000, burn_in = 4000, thinning = 1)
 
 ```
 
@@ -259,7 +260,7 @@ ggplot(data = data.frame(u=u.obs[,g],s=s.obs[,g],t=shared_time_median))+
 
 ```
 
-Finally, we apply a point estimate for $\beta$ to adjust all the parameters and compute the predicted velocities across genes. This can be visualized on a PCA space through:
+Finally, we apply a point estimate for $1/\beta$ to adjust all the parameters and compute the predicted velocities across genes. This can be visualized on a PCA space through:
 
 ```{r}
 # combined_all_genes - a list of results for all genes. Each item is the output from the function result_combine()

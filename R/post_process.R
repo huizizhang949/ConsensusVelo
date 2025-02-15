@@ -22,7 +22,7 @@
 #'
 #' @examples
 #' post_result <- mcmc_shared_time(x = y, k.mode = k.mode, var.logt = var.logt,
-#'   p.hat = p.hat, n_chains = 3, niter = 200, burn_in = 100, thinning = 1)
+#'   p.hat = p.hat, n_chains = 2, niter = 200, burn_in = 100, thinning = 1)
 mcmc_shared_time <- function(x, k.mode, var.logt, p.hat, n_chains=1, niter=1000, burn_in=0, thinning=1){
 
   y <- x
@@ -309,7 +309,7 @@ shared_time_pca <- function(u.obs, s.obs, shared_time){
 #' @param s.obs a cell-by-gene matrix of spliced counts.
 #' @param groups a vector of strings for colors to show different groups of cells, if available.
 #' @param delta a time increment to compute cell future position (default to 1).
-#' @param obs_ind a vector of cell indices for which predicted velocities will be computed.
+#' @param obs_ind a vector of cell indices for which predicted velocities will be computed. If not provided, 5 cells will be randomly selected.
 #' @param thinning compute predicted velocity for thinned samples. The posterior mean is also based on thinned samples.
 #' @param n_cores number of cores used for parallel computing.
 #' @param cluster_type see \code{makeCluster} for parallel omputing.
@@ -322,8 +322,8 @@ shared_time_pca <- function(u.obs, s.obs, shared_time){
 #'
 #' @examples
 #' velocity_pca(combined_all_genes = combined_all_genes, post_result = post_result,
-#'     groups = rep(c('blue','yellow'),each=200),
-#'     u.obs = u.obs, s.obs = s.obs, obs_ind = seq(40,400,by=40), thinning = 1, cex = 0.2)
+#'     u.obs = u.obs, s.obs = s.obs, n_cores=2,]
+#'     obs_ind = seq(40,400,by=40), thinning = 1, cex = 0.2)
 velocity_pca <- function(combined_all_genes, post_result, u.obs, s.obs, groups = NULL,
                          delta = 1, obs_ind = NULL, thinning = 1,
                          n_cores=NULL, cluster_type='FORK',

@@ -5,7 +5,7 @@
 #'
 #' @param consensus_result output from \code{velo_consensus}.
 #' @param Width selected value for \eqn{W}. Only the first \code{Width} chains will be saved in the output.
-#' @param ind sample index at which MCMC samples are saved in the output.
+#' @param ind sample index at which MCMC samples are saved in the output. Default to save everything.
 #' @param hyper if TRUE, samples for hyper-parameters \eqn{\mu_{\tau,j}} and \eqn{\sigma^2_{\tau,j}} are saved. These will be useful for posterior predictive checks.
 #'
 #' @return The output returns a list of results for first \code{Width} chains at selected sample index.
@@ -20,7 +20,7 @@
 #' @export
 #'
 #' @examples
-#' combined <- result_combine(consensus_result = consensus_result, Width = 3, ind = 10:100)
+#' combined <- result_combine(consensus_result = consensus_result, Width = 50, ind = 4901:5000)
 result_combine <- function(consensus_result, Width, ind=NULL, hyper=TRUE){
 
   params <- c('alpha1_1','gamma','lambda','t0','u01','sigma_u_2','sigma_s_2','p','tau','mus','mu_tau','var_tau','k')
@@ -199,7 +199,7 @@ plot_fit <- function(combined_result, u.obs, s.obs, thinning=1, title='', cex=1)
 #' @param u.obs a vector of observed unspliced counts.
 #' @param s.obs a vector of observed spliced counts.
 #' @param delta a time increment to compute cell future position (default to 1).
-#' @param obs_ind a vector of cell indices for which predicted velocities will be computed.
+#' @param obs_ind a vector of cell indices for which predicted velocities will be computed. If not provided, 5 cells will be randomly selected.
 #' @param thinning compute predicted velocity for thinned samples. The posterior mean is also based on thinned samples.
 #' @param cex see \code{par}.
 #' @param transparency level of transparency added to the observed values (between 0 and 1).

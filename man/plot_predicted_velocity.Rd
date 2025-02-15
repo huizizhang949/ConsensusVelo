@@ -24,7 +24,7 @@ plot_predicted_velocity(
 
 \item{delta}{a time increment to compute cell future position (default to 1).}
 
-\item{obs_ind}{a vector of cell indices for which predicted velocities will be computed.}
+\item{obs_ind}{a vector of cell indices for which predicted velocities will be computed. If not provided, 5 cells will be randomly selected.}
 
 \item{thinning}{compute predicted velocity for thinned samples. The posterior mean is also based on thinned samples.}
 

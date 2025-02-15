@@ -32,7 +32,7 @@ velocity_pca(
 
 \item{delta}{a time increment to compute cell future position (default to 1).}
 
-\item{obs_ind}{a vector of cell indices for which predicted velocities will be computed.}
+\item{obs_ind}{a vector of cell indices for which predicted velocities will be computed. If not provided, 5 cells will be randomly selected.}
 
 \item{thinning}{compute predicted velocity for thinned samples. The posterior mean is also based on thinned samples.}
 
@@ -55,6 +55,6 @@ visualized on the PCA space.
 }
 \examples{
 velocity_pca(combined_all_genes = combined_all_genes, post_result = post_result,
-    groups = rep(c('blue','yellow'),each=200),
-    u.obs = u.obs, s.obs = s.obs, obs_ind = seq(40,400,by=40), thinning = 1, cex = 0.2)
+    u.obs = u.obs, s.obs = s.obs, n_cores=2,]
+    obs_ind = seq(40,400,by=40), thinning = 1, cex = 0.2)
 }

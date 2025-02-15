@@ -11,7 +11,7 @@ result_combine(consensus_result, Width, ind = NULL, hyper = TRUE)
 
 \item{Width}{selected value for \eqn{W}. Only the first \code{Width} chains will be saved in the output.}
 
-\item{ind}{sample index at which MCMC samples are saved in the output.}
+\item{ind}{sample index at which MCMC samples are saved in the output. Default to save everything.}
 
 \item{hyper}{if TRUE, samples for hyper-parameters \eqn{\mu_{\tau,j}} and \eqn{\sigma^2_{\tau,j}} are saved. These will be useful for posterior predictive checks.}
 }
@@ -29,5 +29,5 @@ initial condition, variance parameters and hyper-parameter \eqn{p}. Each column 
 This function combines MCMC samples for parameters from multiple chains into a clearer structure, based on selected \eqn{W} and \eqn{D}.
 }
 \examples{
-combined <- result_combine(consensus_result = consensus_result, Width = 3, ind = 10:100)
+combined <- result_combine(consensus_result = consensus_result, Width = 50, ind = 4901:5000)
 }

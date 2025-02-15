@@ -17,9 +17,9 @@
 #' @param empirical output from \code{get_empirical}.
 #' @param mcmc a list of mcmc setup: number of iterations, thinning and burnin for the preparation step and complete algorithm.
 #' @param epsilon a small positive value used to compute empirical \eqn{\tau}. Better to use the same value as used in \code{get_empirical}.
-#' @param n_chains number of chains to run.
+#' @param n_chains number of chains to run. Default to run the same number as the provided \code{state_inits}.
 #' @param n_cores number of cores used for parallel computing.
-#' @param cluster_type see \code{makeCluster} for parallel omputing.
+#' @param cluster_type see \code{makeCluster} for parallel computing.
 #' @param verbose if TRUE, print the running time for the preparation step and complete algorithm for the first chain.
 #'
 #' @return The output is a list of results for all chains. Within each list, it contains the following components for each chain:
@@ -51,10 +51,10 @@
 #'
 #' @examples
 #' mcmc_list <- list(prep_niter = 1000, prep_burn_in = 500, prep_thinning = 1,
-#'     comp_niter = Depth, comp_burn_in = 0, comp_thinning = 1)
+#'     comp_niter = 1000, comp_burn_in = 500, comp_thinning = 1)
 #' set.seed(1)
 #' consensus_result <- velo_consens(u.obs = u.obs, s.obs = s.obs, state_inits = k.inits,
-#'    empirical = empirical, mcmc = mcmc_list, epsilon = 1e-3, n_cores = 3, n_chains = Width)
+#'    empirical = empirical, mcmc = mcmc_list, epsilon = 1e-3, n_cores = 3, n_chains = 10)
 velo_consens <- function(u.obs, s.obs, state_inits, empirical=list(), mcmc=list(), epsilon=1e-3,
                          n_chains=NULL, n_cores=NULL, cluster_type='FORK', verbose=TRUE){
 

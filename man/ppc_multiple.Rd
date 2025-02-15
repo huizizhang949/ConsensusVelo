@@ -9,7 +9,8 @@ ppc_multiple(
   s.obs,
   combined_result,
   n_replicate,
-  prob = c(0.005, 0.995),
+  prob = 0.95,
+  quantiles = seq(0.05, 0.95, by = 0.05),
   u.quant = c(0.35, 0.8),
   s.quant = c(0.35, 0.8),
   gamma.hat.obs
@@ -24,7 +25,9 @@ ppc_multiple(
 
 \item{n_replicate}{number of replicates.}
 
-\item{prob}{the target probability content of the credible interval.}
+\item{prob}{the target probability of the credible interval.}
+
+\item{quantiles}{a vector of quantiles to compare between the replicates and true data.}
 
 \item{u.quant, s.quant}{a vector of two values for lower and upper quantiles to find
 empirical repression and induction steady states for unspliced and spliced counts. Should be the same as used in \code{get_empirical}.}
@@ -48,6 +51,6 @@ replicates and observed data
 \examples{
 set.seed(4)
 ppc_multiple(u.obs = u.obs, s.obs = s.obs, combined_result = combined,
-  n_replicate = 1000, prob = c(0.005,0.995), u.quant = c(0.35,0.8),
-  s.quant = c(0.35,0.8), gamma.hat.obs = empirical$params$gamma.hat)
+  n_replicate = 1000, prob = 0.95, quantiles=seq(0.05,0.95,by=0.05),
+  u.quant = c(0.35,0.8), s.quant = c(0.35,0.8), gamma.hat.obs = empirical$params$gamma.hat)
 }

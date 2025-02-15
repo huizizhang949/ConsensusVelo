@@ -22,14 +22,28 @@ k.inits <- cbind(k.inits1,k.inits2)[,rand_ind]
 # consensus velocity
 # number of chains
 Width <- 3
-Depth <- 100
+Depth <- 1000
 
-set.seed(4343)
-seed <- sample(1:1e5,size=Width)
-consensus_result <- velo_consens(u.obs = u.obs, s.obs = s.obs, k.inits = k.inits, empirical = empirical,
-                                 epsilon = 1e-3, alpha1.sd = 5, gamma.sd = 0.4, t0.sd = 3, lambda.lower = 0.3, lambda.upper = 8,
-                                 seed = seed, prep_niter = 10, prep_burn_in = 0, prep_thinning = 1,
-                                 comp_niter = Depth, comp_burn_in = 0, comp_thinning = 1, n_cores = 3, n_chains = Width)
+# define other prior parameters, if not provided, default values will be used
+# standard deviations of alpha1, gamma and switching point
+empirical$params$alpha1.sd=5
+empirical$params$gamma.sd=0.4
+empirical$params$t0.sd=3
+# upper and lower bound of lambda
+empirical$params$lambda.lower=0; empirical$params$lambda.upper=5
+# the parameter in the inverse-gamma prior for the two variance parameters: IG(invgamma.f, invgamma.f * empirical)
+empirical$params$invgamma.f=1
+# the parameter in the prior for mu_tau (also for var_tau), control the variance: TruncN(mean, (hyper.f*mean)^2)
+empirical$params$hyper.f=2
+
+
+# mcmc setup (if not provided, default values will be used)
+mcmc_list <- list(prep_niter = 1000, prep_burn_in = 500, prep_thinning = 1,
+                  comp_niter = Depth, comp_burn_in = 0, comp_thinning = 1)
+
+set.seed(1)
+consensus_result <- velo_consens(u.obs = u.obs, s.obs = s.obs, state_inits = k.inits, empirical = empirical,
+                                 mcmc = mcmc_list, epsilon = 1e-3, n_cores = 3, n_chains = Width)
 
 
 set.seed(234)
@@ -66,10 +80,10 @@ plot_entropy(Ws = Ws, Ds = 500, mcmc_k = mcmc_k_result)
 Ds <- c(1, seq(100,1000,by=100))
 
 # plot absolute difference in moving average of log-posterior, conditional on a fixed W (or several Ws).
-plot_lp(Ws = 100, Ds = Ds, mcmc_lp = mcmc_lp_result)
+plot_lp(Ws = 1, Ds = Ds, mcmc_lp = mcmc_lp_result)
 
 
-# suppose we decide to use all the chains and the last 100 iterations of each chain
+# suppose we decide to use all the chains and the last 100 (saved) samples in each chain
 # below we clean up the results
 load("~/Library/CloudStorage/OneDrive-UniversityofEdinburgh/Mac/Project/code/velocity_MCMC/sim_4_13_1_consensus/combined_W100_D9k_10k_thin10.RData")
 
@@ -77,7 +91,7 @@ load("~/Library/CloudStorage/OneDrive-UniversityofEdinburgh/Mac/Project/code/vel
 # there are matrices for univariate parameters ('params'),
 # for 'tau', 'mus', 'v', 't', 'k', 'hyper'
 # the rows for of every matrix correspond to samples, with nrow = length(ind)
-combined <- result_combine(consensus_result = consensus_result, Width = 3, ind = 10:100)
+combined <- result_combine(consensus_result = consensus_result, Width = 3, ind = 900:1000)
 
 # to show fitted phase portrait (with some thinning)
 plot_fit(combined_result = combined, u.obs = u.obs, s.obs = s.obs, thinning = 10, title = 'Example', cex = 1)
@@ -119,12 +133,13 @@ ppc_single(u.obs = u.obs, s.obs = s.obs, combined_result = combined)
 
 # --- multiple replicates -----
 set.seed(4)
-ppc_multiple(u.obs = u.obs, s.obs = s.obs, combined_result = combined, n_replicate = 1000, prob = c(0.005,0.995),
+ppc_multiple(u.obs = u.obs, s.obs = s.obs, combined_result = combined, n_replicate = 200, prob = 0.95,
+             quantiles=seq(0.05,0.95,by=0.05),
              u.quant = c(0.35,0.8), s.quant = c(0.35,0.8), gamma.hat.obs = empirical$params$gamma.hat)
 
 # the function plots histograms for ppp values and also outputs them
 set.seed(134)
-ppp_values <- ppp_mixed(u.obs = u.obs, s.obs = s.obs, combined_result = combined, n_replicate = 1000, prob = 0.9)
+ppp_values <- ppp_mixed(u.obs = u.obs, s.obs = s.obs, combined_result = combined, n_replicate = 100, prob = 0.9)
 
 hist(c(ppp_values$ppp.u.ind,ppp_values$ppp.s.ind),breaks = 20)
 hist(c(ppp_values$ppp.u.repres,ppp_values$ppp.s.repres),breaks = 20)
@@ -138,7 +153,7 @@ load('man/u.obs.RData'); load('man/s.obs.RData')
 # the post-processing step is implemented using rjags
 # the output is a list of length = n_chains, within each list is a matrix
 # the row corresponds to each iteration, columns correspond to variables (mu_c, sigma_2_c, rho_c, b=-log(beta))
-post_result <- mcmc_shared_time(x = y, k.mode = k.mode, var.logt = var.logt, p.hat = p.hat, n_chains = 3,
+post_result <- mcmc_shared_time(x = x, k.mode = k.mode, var.logt = var.logt, p.hat = p.hat, n_chains = 3,
                                 niter = 200, burn_in = 100, thinning = 1)
 
 par(mfrow=c(4,2))
@@ -192,4 +207,12 @@ velocity_pca(combined_all_genes = combined_all_genes, post_result = post_result,
              u.obs = u.obs, s.obs = s.obs,
              obs_ind = seq(40,400,by=40), thinning = 1, cex = 0.2)
 
+# ------ save data --------
+sim.data <- list(u.obs = u.obs, s.obs = s.obs, u.mean = u.mean, s.mean = s.mean,
+                 t = t, tau = tau, state = state, t0 = t0[2], alpha1_1 = alpha1[1],
+                 beta = 1, gamma = gamma, lambda = lambda[1], u01 = u0[1],
+                 sigma_s = sigma_s, sigma_u = sigma_u)
+save(sim.data, file='data/sim.data.rda')
 
+post.summary <- list(u.obs = u.obs, s.obs = s.obs, x = y, k.mode = k.mode, var.logt = var.logt, p.hat = p.hat)
+save(post.summary, file='data/post.summary.rda')

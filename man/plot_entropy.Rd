@@ -4,14 +4,17 @@
 \alias{plot_entropy}
 \title{Plot absolute difference in entropy}
 \usage{
-plot_entropy(Ws, Ds, mcmc_k)
+plot_entropy(Ws, Ds, Ds_label = NULL, mcmc_k)
 }
 \arguments{
-\item{Ws}{a vector of candidate values for widths (number of chains).}
+\item{Ws}{a vector of candidate values for widths in an increasing order (number of chains).}
 
-\item{Ds}{either an integer or a vector of integers. Absolute differences will be computed for each value in \code{Ds}.}
+\item{Ds}{either an integer or a vector of integers (in an increasing order). Absolute differences will be computed for each value in \code{Ds}.}
 
-\item{mcmc_k}{a list, each corresponding to the samples of k from a single chain.}
+\item{Ds_label}{labels of depths in the plot. In case there is thinning or burnin, \code{Ds} should be the index in the saved samples,
+and \code{Ds_label} should be the original index in the whole sampling process. Should be of the same length as Ds.}
+
+\item{mcmc_k}{a list, each corresponding to the (saved) samples of k from a single chain.}
 }
 \value{
 If \code{Ds} is an integer, a line plot showing absolute difference in entropy between different widths.

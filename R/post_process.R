@@ -92,8 +92,10 @@ mcmc_shared_time <- function(x, k.mode, var.logt, p.hat, n_chains, niter, burn_i
     more.inits <- lapply(1:(n_chains-1), function(i){
 
       set.seed(i)
+      rho_temp <- matrix(runif(2*n),nrow=n,ncol=2)
+      rho_temp <- rho_temp/rowSums(rho_temp)
       list(mu_c=mu_c_initial,sigma_2_c_inv=1/sigma_2_c_initial,
-           rho=matrix(runif(2*n),nrow=n,ncol=2),
+           rho=rho_temp,
            b=c(NA,rnorm(G-1)),
            ".RNG.name" = "base::Wichmann-Hill", ".RNG.seed" = i+1)
     })

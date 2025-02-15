@@ -13,6 +13,7 @@ Description: This package implements a Bayesian model to infer RNA velocity base
 License: GPL (>= 2)
 Encoding: UTF-8
 LazyData: true
+LinkingTo: Rcpp
 Depends:
     R (>= 3.50)
 Imports:
@@ -27,5 +28,6 @@ Imports:
     rjags,
     truncnorm,
     truncdist,
-    graphics
+    graphics,
+    Rcpp
 RoxygenNote: 7.3.2

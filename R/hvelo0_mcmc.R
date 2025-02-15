@@ -1,12 +1,12 @@
-hvelo0_mcmc <- function(u_obs, s_obs, niter, burn_in, thinning=1,
+hvelo0_mcmc <- function(u_obs, s_obs, niter, burn_in=0, thinning=1,
                         mu_alpha, sig_alpha=1, mu_gamma, sig_gamma=0.4,
                         mu_star_base, sig_star_base, eta_base, nu_base, mu_0, var_0,
                         q_lower=0.3, q_upper=6, sigma_u_2_hat, sigma_s_2_hat, invgamma_f=1,
-                        u01_lower, u01_upper, target_accept=0.44,
-                        k_initial=NULL, p_initial=NULL, alpha1_1_initial=NULL, gamma_initial=NULL,
-                        tau_initial=NULL, mu_tau_initial=NULL, var_tau_initial=NULL, t0_initial=NULL,
-                        q_initial=NULL, sigma_u_2_initial=NULL, sigma_s_2_initial=NULL, u01_initial=NULL,
-                        k_true=NULL){
+                        u01_lower, u01_upper, target_accept=0.44, verbose=TRUE,
+                        k_initial=NULL, p_initial=NULL, alpha1_1_initial, gamma_initial,
+                        tau_initial, mu_tau_initial, var_tau_initial, t0_initial,
+                        q_initial, sigma_u_2_initial, sigma_s_2_initial, u01_initial,
+                        k_fix=NULL){
 
   # we fix beta to be 1, and estimate q = lambda/beta
   # in the post-processing step, q does not need to be adjusted by beta
@@ -56,12 +56,12 @@ hvelo0_mcmc <- function(u_obs, s_obs, niter, burn_in, thinning=1,
   # beta fixed to be 1
   beta <- 1
 
-  # Stop if both k_initial and k_true are not given
-  if(is.null(k_initial)&is.null(k_true)){
+  # Stop if both k_initial and k_fix are not given
+  if(is.null(k_initial)&is.null(k_fix)){
     stop('Either initial values or true values should be given for states k!')
   }
 
-  if(is.null(p_initial)&is.null(k_true)){
+  if(is.null(p_initial)&is.null(k_fix)){
     stop('Initial value for p should be given when k is not fixed!')
   }
 
@@ -118,10 +118,10 @@ hvelo0_mcmc <- function(u_obs, s_obs, niter, burn_in, thinning=1,
   log_post <- rep(NA, niter)
 
   #----------------------- Step 1: Set the initial values as new values ----------------------------
-  if(is.null(k_true)){
+  if(is.null(k_fix)){
     k_new <- k_initial
   }else{
-    k_new <- k_true
+    k_new <- k_fix
   }
   p_new <- p_initial
 
@@ -188,17 +188,19 @@ hvelo0_mcmc <- function(u_obs, s_obs, niter, burn_in, thinning=1,
   # count the number of iterations where MH is used to draw mu_tau and var_tau
   MH_count_mu_tau <- rep(2,2); MH_count_var_tau <- rep(2,2)
 
-  # Show time
   start_time_mcmc <- Sys.time()
-  print(paste('Start MCMC:', start_time_mcmc))
-  cat('\n')
+  if(verbose){
+    # Show time
+    print(paste('Start MCMC:', start_time_mcmc))
+    cat('\n')
 
-  pb <- txtProgressBar(min = 1, max = niter+1, style = 3)
+    pb <- txtProgressBar(min = 1, max = niter+1, style = 3)
+  }
 
   # Iteration starts with iter = 2
   for(iter in 2:(niter+1)){
 
-    setTxtProgressBar(pb, iter)
+    if(verbose) {setTxtProgressBar(pb, iter)}
     # Starting value of the output index = 1
     # If the current iteration is greater than the burn in and divisible by the thinning index
     criterion <- (iter-1 > burn_in & (iter-1-burn_in)%%thinning == 0)
@@ -362,14 +364,14 @@ hvelo0_mcmc <- function(u_obs, s_obs, niter, burn_in, thinning=1,
 
 
     # 8) Update states k
-    if(is.null(k_true)){
+    if(is.null(k_fix)){
       k_new <- k_update(u_obs = u_obs, s_obs = s_obs, alpha1_1 = alpha1_1_new, beta = beta, gamma = gamma_new, q = q_new,
                         sigma_u_2 = sigma_u_2_new, sigma_s_2 = sigma_s_2_new, tau = tau_new, t0 = t0_new, u01 = u01_new,
                         p = p_new, mu_tau = mu_tau_new, var_tau = var_tau_new, compute_mean = compute_mean)
     }
 
     # 9) Update p
-    if(is.null(k_true)){
+    if(is.null(k_fix)){
       p_new <- p_update(k = k_new)
     }
 
@@ -394,7 +396,7 @@ hvelo0_mcmc <- function(u_obs, s_obs, niter, burn_in, thinning=1,
                      upper = ifelse(k_new==1, t0_new, Inf), log = TRUE))+
       sum(dtnorm(x = mu_tau_new, mean = mu_star_base, sd = sig_star_base, lower = 0, log = TRUE))+
       sum(dtnorm(x = var_tau_new, mean = eta_base, sd = nu_base, lower = 0, log = TRUE))+
-      ifelse(is.null(k_true),sum(k_new==1)*log(p_new) + sum(k_new==2)*log(1-p_new), 0)-
+      ifelse(is.null(k_fix),sum(k_new==1)*log(p_new) + sum(k_new==2)*log(1-p_new), 0)-
       (invgamma_f+1)*log(sigma_u_2_new)-invgamma_f*sigma_u_2_hat/sigma_u_2_new-
       (invgamma_f+1)*log(sigma_s_2_new)-invgamma_f*sigma_s_2_hat/sigma_s_2_new
 
@@ -408,7 +410,7 @@ hvelo0_mcmc <- function(u_obs, s_obs, niter, burn_in, thinning=1,
                        upper = ifelse(k_new==1, t0_new, Inf), log = TRUE))+
         sum(myldtnorm(x = mu_tau_new, mean = mu_star_base, sd = sig_star_base, lower = 0, log = TRUE))+
         sum(myldtnorm(x = var_tau_new, mean = eta_base, sd = nu_base, lower = 0, log = TRUE))+
-        ifelse(is.null(k_true),sum(k_new==1)*log(p_new) + sum(k_new==2)*log(1-p_new), 0)-
+        ifelse(is.null(k_fix),sum(k_new==1)*log(p_new) + sum(k_new==2)*log(1-p_new), 0)-
         (invgamma_f+1)*log(sigma_u_2_new)-invgamma_f*sigma_u_2_hat/sigma_u_2_new-
         (invgamma_f+1)*log(sigma_s_2_new)-invgamma_f*sigma_s_2_hat/sigma_s_2_new
     }
@@ -469,14 +471,18 @@ hvelo0_mcmc <- function(u_obs, s_obs, niter, burn_in, thinning=1,
                   'u01_lower' = u01_lower, 'u01_upper' = u01_upper,
                   'sigma_u_2_hat' = sigma_u_2_hat, 'sigma_s_2_hat' = sigma_s_2_hat, 'invgamma_f' = invgamma_f)
 
-  close(pb)
-
-  cat('\n')
   end_time <- Sys.time()
-  print(paste('End:',end_time))
-  cat('\n')
   diff_time <- difftime(end_time,start_time_mcmc)
-  print(paste('MCMC running time:', round(diff_time, digits = 3),units(diff_time)))
+
+  if(verbose) {
+    close(pb)
+
+    cat('\n')
+    print(paste('End:',end_time))
+    cat('\n')
+    print(paste('MCMC running time:', round(diff_time, digits = 3),units(diff_time)))
+
+  }
 
   return(my_list)
 }

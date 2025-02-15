@@ -4,7 +4,7 @@
 \alias{result_combine}
 \title{Combine MCMC samples from multiple chains}
 \usage{
-result_combine(consensus_result, Width, ind, hyper = FALSE)
+result_combine(consensus_result, Width, ind, hyper = TRUE)
 }
 \arguments{
 \item{consensus_result}{output from \code{velo_consensus}.}

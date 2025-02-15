@@ -31,19 +31,19 @@ myldtgamma <- function(x, alpha, beta, lower=0, upper=Inf, log=TRUE){
 # ------------------------------- MCMC Gibbs update ------------------------------
 
 # ------------------- Update tau ----------------------
-tau_log_prob <- function(tau_cc, u_obs_cc, s_obs_cc, mu_u, mu_s, sigma_u_2, sigma_s_2,
-                         mu_tau_cc, var_tau_cc, tau_upper_cc){
+tau_log_prob <- function(tau, u_obs, s_obs, mu_u, mu_s, sigma_u_2, sigma_s_2,
+                         mu_tau, var_tau, tau_upper){
 
-  lp <- dtnorm(x = u_obs_cc, mean = mu_u, sd = sqrt(sigma_u_2), lower = 0, log = TRUE)+
-    dtnorm(x = s_obs_cc, mean = mu_s, sd = sqrt(sigma_s_2), lower = 0, log = TRUE)+
-    myldtgamma(x = tau_cc, alpha = mu_tau_cc^2/var_tau_cc, beta = mu_tau_cc/var_tau_cc, lower = 0,
-               upper = tau_upper_cc, log = TRUE)
+  lp <- dtnorm(x = u_obs, mean = mu_u, sd = sqrt(sigma_u_2), lower = 0, log = TRUE)+
+    dtnorm(x = s_obs, mean = mu_s, sd = sqrt(sigma_s_2), lower = 0, log = TRUE)+
+    myldtgamma(x = tau, alpha = mu_tau^2/var_tau, beta = mu_tau/var_tau, lower = 0,
+               upper = tau_upper, log = TRUE)
 
-  if(is.infinite(lp) || is.na(lp)){
-    lp <- myldtnorm(x = u_obs_cc, mean = mu_u, sd = sqrt(sigma_u_2), lower = 0, log = TRUE)+
-      myldtnorm(x = s_obs_cc, mean = mu_s, sd = sqrt(sigma_s_2), lower = 0, log = TRUE)+
-      myldtgamma(x = tau_cc, alpha = mu_tau_cc^2/var_tau_cc, beta = mu_tau_cc/var_tau_cc, lower = 0,
-                 upper = tau_upper_cc, log = TRUE)
+  if(any(is.infinite(lp)) || any(is.na(lp))){
+    lp <- myldtnorm(x = u_obs, mean = mu_u, sd = sqrt(sigma_u_2), lower = 0, log = TRUE)+
+      myldtnorm(x = s_obs, mean = mu_s, sd = sqrt(sigma_s_2), lower = 0, log = TRUE)+
+      myldtgamma(x = tau, alpha = mu_tau^2/var_tau, beta = mu_tau/var_tau, lower = 0,
+                 upper = tau_upper, log = TRUE)
   }
 
   return(lp)
@@ -62,65 +62,47 @@ tau_update <- function(tau, u_obs, s_obs, k, alpha1_1, beta, gamma, q, sigma_u_2
   tau_old <- tau; X_old <- -log(1/tau_old-1/tau_upper)
   sd_tau_old <- sd_tau
 
-  # Save updated scaling factor
-  sd_tau_new <- rep(NA, N)
-
-  # Save updated tau
-  tau_new <- rep(NA, N)
-
-  accept_count <- 0
   n <- iter_num
 
   # Compute current (old) mean s and u for each cell
   mus_old <- compute_mean(tau = tau_old, t0 = t0, k = k, alpha1_1 = alpha1_1, beta = beta, gamma = gamma, q = q, u01 = u01)
 
-  loop.result <- lapply(1:N, function(cc) {
+  # Apply AMH
+  X_new <- rnorm(N, mean = X_old, sd=sqrt(sd_tau_old))
+  # Transform back to tau
+  tau_new <- 1/(exp(-X_new)+1/tau_upper)
+  tau_new <- ifelse(tau_new==0, tau_new+.Machine$double.eps, tau_new)
+  tau_new <- ifelse(tau_new>=tau_upper, 1/(.Machine$double.eps+1/tau_upper), tau_new)
 
-    # Apply AMH
-    X_new <- rnorm(n = 1, mean = X_old[cc], sd = sqrt(sd_tau_old[cc]))
-    # Transform back to tau
-    tau_new_cc <- 1/(exp(-X_new)+1/tau_upper[cc])
+  # Compute new mean for s and u
+  mu_new <- compute_mean(tau = tau_new, t0 = t0, k = k, alpha1_1 = alpha1_1, beta = beta, gamma = gamma, q = q, u01 = u01)
 
-    # Compute new mean for s and u for this cell
-    mu_new_cc <- compute_mean(tau = tau_new_cc, t0 = t0, k = k[cc], alpha1_1 = alpha1_1, beta = beta, gamma = gamma,
-                              q = q, u01 = u01)
+  # Compute log acceptance probability
+  log_acceptance <- tau_log_prob(tau = tau_new, u_obs = u_obs, s_obs = s_obs,
+                                 mu_u = mu_new$u_mean, mu_s = mu_new$s_mean, sigma_u_2 = sigma_u_2,
+                                 sigma_s_2 = sigma_s_2, mu_tau = mu_tau[k], var_tau = var_tau[k],
+                                 tau_upper = tau_upper)-
+    tau_log_prob(tau = tau_old, u_obs, s_obs, mu_u = mus_old$u_mean, mu_s = mus_old$s_mean,
+                 sigma_u_2, sigma_s_2, mu_tau[k], var_tau[k], tau_upper)+
+    ifelse(k==1, log(tau_new)+log(tau_upper-tau_new)-log(tau_old)-log(tau_upper-tau_old),
+           log(tau_new)-log(tau_old))
 
-    # Compute log acceptance probability
-    log_acceptance <- tau_log_prob(tau_cc = tau_new_cc, u_obs_cc = u_obs[cc], s_obs_cc = s_obs[cc],
-                                   mu_u = mu_new_cc$u_mean, mu_s = mu_new_cc$s_mean, sigma_u_2 = sigma_u_2,
-                                   sigma_s_2 = sigma_s_2, mu_tau_cc = mu_tau[k[cc]], var_tau_cc = var_tau[k[cc]],
-                                   tau_upper_cc = tau_upper[cc])-
-      tau_log_prob(tau_cc = tau_old[cc], u_obs[cc], s_obs[cc], mu_u = mus_old$u_mean[cc], mu_s = mus_old$s_mean[cc],
-                   sigma_u_2, sigma_s_2, mu_tau[k[cc]], var_tau[k[cc]], tau_upper[cc])+
-      ifelse(k[cc]==1, log(tau_new_cc)+log(tau_upper[cc]-tau_new_cc)-log(tau_old[cc])-log(tau_upper[cc]-tau_old[cc]),
-             log(tau_new_cc)-log(tau_old[cc]))
+  log_acceptance <- c(unname(log_acceptance))
 
-    acceptance_tau <- exp(log_acceptance)
-    acceptance_tau <- min(1, acceptance_tau)
-    log_prob <- min(0,log_acceptance)
+  acceptance_tau <- exp(log_acceptance)
+  acceptance_tau <- ifelse(acceptance_tau>=1,1,acceptance_tau)
+  log_prob <- ifelse(log_acceptance>=0,0,log_acceptance)
 
-    # Decision
-    outcome <- runif(1,min=0,max=1)
-    if(log(outcome) > log_prob){
-      X_new <- X_old[cc]
-      tau_new_cc <- tau_old[cc]
-      accept <- 0
-    }else{
-      accept <- 1
-    }
+  # Decision
+  outcome <- runif(N,min=0,max=1)
+  X_new <- ifelse(log(outcome) > log_prob, X_old, X_new)
+  tau_new <- ifelse(log(outcome) > log_prob, tau_old, tau_new)
+  accept_count <- sum(log(outcome) <= log_prob)
 
-    # Update scale parameter in the proposal distribution
-    sd_tau_cc <- exp(log(sd_tau_old[cc])+n^(-0.7)*(acceptance_tau-target_accept))
-    if(sd_tau_cc>exp(50)) {sd_tau_cc <- exp(50)}
-    if(sd_tau_cc<exp(-50)) {sd_tau_cc <- exp(-50)}
-
-    return(list(X_new=X_new, tau_new_cc=tau_new_cc,accept=accept, sd_tau_cc=sd_tau_cc))
-  })# end lapply
-
-  # Now move results to the new vectors
-  tau_new <- sapply(loop.result, function(l) l$tau_new_cc)
-  sd_tau_new <- sapply(loop.result, function(l) l$sd_tau_cc)
-  accept_count <- sum(sapply(loop.result, function(l) l$accept))
+  # Update scale parameter in the proposal distribution
+  sd_tau_new <- exp(log(sd_tau_old)+n^(-0.7)*(acceptance_tau-target_accept))
+  sd_tau_new <- ifelse(sd_tau_new>exp(50), exp(50), sd_tau_new)
+  sd_tau_new <- ifelse(sd_tau_new<exp(-50), exp(-50), sd_tau_new)
 
   return(list(tau_new=tau_new,accept_count=accept_count, sd_tau_new=sd_tau_new))
 }
@@ -789,44 +771,48 @@ k_update <- function(u_obs, s_obs, alpha1_1, beta, gamma, q, sigma_u_2, sigma_s_
 
   prob <- c(p, 1-p)
 
-  kk <- vapply(1:N, function(cc) {
+  ix <- (tau<=t0)
+  LP <- matrix(NA,nrow=N,ncol=2)
+  if(any(ix)){
+    # sum(ix) * 2
+    LP1 <- do.call(cbind,lapply(1:2,function(j) {
 
-    if(tau[cc]>t0){
-      k_cc <- 2
+      lp <- dtnorm(x = u_obs[ix], mean = mean_by_k[[j]]$u_mean[ix], sd = sqrt(sigma_u_2), lower = 0, log = TRUE)+
+        dtnorm(x = s_obs[ix], mean = mean_by_k[[j]]$s_mean[ix], sd = sqrt(sigma_s_2), lower = 0, log = TRUE)+
+        myldtgamma(x = tau[ix], alpha = mu_tau[j]^2/var_tau[j], beta = mu_tau[j]/var_tau[j], lower = 0,
+                   upper = tau_upper[j], log = TRUE)+
+        log(prob[j])
 
-      return(k_cc)
-    }else{
-      ## Set log probability
-      LP <- vapply(1:2, function(j) {
-
-        lp <- dtnorm(x = u_obs[cc], mean = mean_by_k[[j]]$u_mean[cc], sd = sqrt(sigma_u_2), lower = 0, log = TRUE)+
-          dtnorm(x = s_obs[cc], mean = mean_by_k[[j]]$s_mean[cc], sd = sqrt(sigma_s_2), lower = 0, log = TRUE)+
-          myldtgamma(x = tau[cc], alpha = mu_tau[j]^2/var_tau[j], beta = mu_tau[j]/var_tau[j], lower = 0,
+      if(any(is.infinite(lp)) || any(is.na(lp))){
+        lp <- myldtnorm(x = u_obs[ix], mean = mean_by_k[[j]]$u_mean[ix], sd = sqrt(sigma_u_2), lower = 0, log = TRUE)+
+          myldtnorm(x = s_obs[ix], mean = mean_by_k[[j]]$s_mean[ix], sd = sqrt(sigma_s_2), lower = 0, log = TRUE)+
+          myldtgamma(x = tau[ix], alpha = mu_tau[j]^2/var_tau[j], beta = mu_tau[j]/var_tau[j], lower = 0,
                      upper = tau_upper[j], log = TRUE)+
           log(prob[j])
+      }
 
-        if(is.infinite(lp) || is.na(lp)){
-          lp <- myldtnorm(x = u_obs[cc], mean = mean_by_k[[j]]$u_mean[cc], sd = sqrt(sigma_u_2), lower = 0, log = TRUE)+
-            myldtnorm(x = s_obs[cc], mean = mean_by_k[[j]]$s_mean[cc], sd = sqrt(sigma_s_2), lower = 0, log = TRUE)+
-            myldtgamma(x = tau[cc], alpha = mu_tau[j]^2/var_tau[j], beta = mu_tau[j]/var_tau[j], lower = 0,
-                       upper = tau_upper[j], log = TRUE)+
-            log(prob[j])
-        }
+      return(lp)
+    }))
 
-        return(lp)
-      }, FUN.VALUE = numeric(1))
+    LP[ix,] <- LP1
+  }
 
-      # Compute the normalizing constant
-      nc <- -max(LP)
-      P <- exp(LP+nc)/sum(exp(LP+nc)) # LP is a vector of length 2
-      k_cc <- sample(1:2, 1, prob=P)
+  if(any(!ix)){
+    LP[!ix,] <- matrix(c(-Inf,0),nrow=sum(!ix),ncol=2,byrow=TRUE)
+  }
 
-      return(k_cc)
-    }
+  if(any(is.na(LP))){
+    print(paste('Error in LP in k: cell', which( is.na(LP) , arr.ind = TRUE )[,1]))
+  }
 
-  }, FUN.VALUE = numeric(1))
+  # Compute the normalizing constant
+  nc <- -apply(LP,1,max)
+  LP_plus_nc <- LP + matrix(nc, nrow = N, ncol = 2)
 
-  return(kk)
+  P <- t(apply(LP_plus_nc, 1, function(x) exp(x)/sum(exp(x))))
+  k <- k_sample_cpp(P)
+
+  return(k)
 }
 
 # ------------------- Update probability p ----------------------

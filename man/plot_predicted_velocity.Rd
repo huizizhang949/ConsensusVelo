@@ -30,7 +30,7 @@ plot_predicted_velocity(
 
 \item{cex}{see \code{par}.}
 
-\item{transparency}{level of transparancy added to the observed values (between 0 and 1).}
+\item{transparency}{level of transparency added to the observed values (between 0 and 1).}
 }
 \value{
 a phase portrait overlaid by posterior samples for predicted velocities for selected cells (grey), and posterior mean is shown in red arrows.

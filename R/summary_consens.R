@@ -21,7 +21,7 @@
 #'
 #' @examples
 #' combined <- result_combine(consensus_result = consensus_result, Width = 3, ind = 10:100)
-result_combine <- function(consensus_result, Width, ind, hyper=FALSE){
+result_combine <- function(consensus_result, Width, ind, hyper=TRUE){
 
   params <- c('alpha1_1','gamma','lambda','t0','u01','sigma_u_2','sigma_s_2','p','tau','mus','mu_tau','var_tau','k')
 
@@ -200,7 +200,7 @@ plot_fit <- function(combined_result, u.obs, s.obs, thinning=1, title=NULL, cex=
 #' @param obs_ind a vector of cell indices for which predicted velocities will be computed.
 #' @param thinning compute predicted velocity for thinned samples. The posterior mean is also based on thinned samples.
 #' @param cex see \code{par}.
-#' @param transparency level of transparancy added to the observed values (between 0 and 1).
+#' @param transparency level of transparency added to the observed values (between 0 and 1).
 #'
 #' @return a phase portrait overlaid by posterior samples for predicted velocities for selected cells (grey), and posterior mean is shown in red arrows.
 #'
@@ -210,7 +210,8 @@ plot_fit <- function(combined_result, u.obs, s.obs, thinning=1, title=NULL, cex=
 #' plot_predicted_velocity(combined_result = combined, u.obs = u.obs, s.obs = s.obs, delta = 1,
 #'     obs_ind = c(1,10,15,20,25,30,35,40,80,100,105,115,120),
 #'     thinning = 10, cex = 0.2, transparency = 0.5)
-plot_predicted_velocity <- function(combined_result, u.obs, s.obs, delta=1, obs_ind, thinning=1, cex=1, transparency=1){
+plot_predicted_velocity <- function(combined_result, u.obs, s.obs, delta=1, obs_ind,
+                                    thinning=1, cex=1, transparency=1){
 
   n <- length(u.obs)
 

@@ -11,22 +11,19 @@
 #' @importFrom utils setTxtProgressBar txtProgressBar
 #' @param u.obs a vector of observed unspliced counts.
 #' @param s.obs a vector of observed spliced counts.
-#' @param k.inits a matrix of initial values for the state. Each column corresponds to one set of initial values, with rows corresponding to cells.
+#' @param state_inits a matrix of initial values for the state. Each column corresponds to one set of initial values, with rows corresponding to cells.
 #' Can use the output from \code{generate_k}.
 #' @param empirical output from \code{get_empirical}.
 #' @param epsilon a small positive value used to compute empirical \eqn{\tau}. Better to use the same value as used in \code{get_empirical}.
-#' @param alpha1.sd standard deviation in the truncated normal prior for \eqn{\alpha_1^{(1)}}.
-#' @param gamma.sd standard deviation in the truncated normal prior for \eqn{\gamma}.
-#' @param t0.sd standard deviation in the Gamma prior for the switching point \eqn{t_0^{(2)}}.
-#' @param lambda.lower,lambda.upper the lower and upper bound in the Uniform prior for \eqn{\lambda}.
 #' @param seed a vector of values used as seed for each chain. Must be of the same length as the number of chains.
 #' @param prep_niter,comp_niter integer. Total number of MCMC iterations for the preparation step and complete step.
 #' @param prep_burn_in,comp_burn_in the length of burn-in period during MCMC for the preparation step and complete step.
 #' @param prep_thinning,comp_thinning the thinning applied after burn-in period for the preparation step and complete step.
 #' @param n_cores number of cores used for parallel computing.
 #' @param n_chains number of chains to run.
+#' @param verbose if TRUE, print the running time for the preparation step and complete algorithm for the first chain.
 #'
-#' @usage velo_consens(u.obs, s.obs, k.inits, empirical, epsilon=1e-3, alpha1.sd, gamma.sd, t0.sd,
+#' @usage velo_consens(u.obs, s.obs, state_inits, empirical, epsilon=1e-3, alpha1.sd, gamma.sd, t0.sd,
 #'    lambda.lower=0, lambda.upper=8, seed, prep_niter, prep_burn_in=0, prep_thinning=1,
 #'    comp_niter, comp_burn_in=0, comp_thinning=1, n_cores=30, n_chains=100)
 #'
@@ -58,118 +55,191 @@
 #' @export
 #'
 #' @examples
-#' set.seed(4343)
-#' seed <- sample(1:1e5,size=Width)
-#' consensus_result <- velo_consens(u.obs = u.obs, s.obs = s.obs,
-#'   k.inits = k.inits, empirical = empirical, epsilon = 1e-3, alpha1.sd = 5,
-#'   gamma.sd = 0.4, t0.sd = 3, lambda.lower = 0.3, lambda.upper = 8,
-#'   seed = seed, prep_niter = 10, prep_burn_in = 0, prep_thinning = 1,
-#'   comp_niter = Depth, comp_burn_in = 0, comp_thinning = 1, n_cores = 3, n_chains = Width)
-velo_consens <- function(u.obs, s.obs, k.inits, empirical, epsilon=1e-3,
-                         alpha1.sd, gamma.sd, t0.sd, lambda.lower=0, lambda.upper=8,
-                         seed, prep_niter, prep_burn_in=0, prep_thinning=1,
-                         comp_niter, comp_burn_in=0, comp_thinning=1, n_cores=30, n_chains=100){
+#' mcmc_list <- list(prep_niter = 1000, prep_burn_in = 500, prep_thinning = 1,
+#'     comp_niter = Depth, comp_burn_in = 0, comp_thinning = 1)
+#' set.seed(1)
+#' consensus_result <- velo_consens(u.obs = u.obs, s.obs = s.obs, state_inits = k.inits,
+#'    empirical = empirical,mcmc = mcmc_list, epsilon = 1e-3, n_cores = 3, n_chains = Width)
 
-  show_end <- function(i){
-    print(paste('preparation for chain',i,'completed!'))
+velo_consens <- function(u.obs, s.obs, state_inits, empirical, mcmc=list(), epsilon=1e-3, n_cores=NULL,
+                         n_chains=NULL, verbose=TRUE){
+
+  # check input
+  if(!is.vector(u.obs) || !is.vector(s.obs)) {stop("s and u must be a vector")}
+  if(!is.matrix(state_inits)) {stop("state_inits must be a matrix")}
+  if(!is.list(empirical)) {stop("empirical must be a list")}
+  if(!is.list(mcmc)) {stop("mcmc must be a list")}
+  if(!is.null(n_chains) && (n_chains>ncol(state_inits))) {
+    stop("the number of initial state is less than the required number of chains")
   }
 
-  result <- pbapply::pblapply(1:n_chains, function(i){
+  # mcmc settings (default)
+  if(is.null(mcmc$prep_niter)) {prep_niter = 1000} else {prep_niter = mcmc$prep_niter}
+  if(is.null(mcmc$prep_thinning)) {prep_thinning = 5} else {prep_thinning = mcmc$prep_thinning}
+  if(is.null(mcmc$prep_burn_in)) {prep_burn_in = 0} else {prep_burn_in = mcmc$prep_burn_in}
+  if(is.null(mcmc$comp_niter)) {comp_niter = 1000} else {comp_niter = mcmc$comp_niter}
+  if(is.null(mcmc$comp_thinning)) {comp_thinning = 5} else {comp_thinning = mcmc$comp_thinning}
+  if(is.null(mcmc$comp_burn_in)) {comp_burn_in = 0} else {comp_burn_in = mcmc$comp_burn_in}
+
+  # parallel chains setup (default)
+  if(is.null(n_cores)) {n_cores <- parallel::detectCores()-1}
+  if(is.null(n_chains)) {n_chains <- 1}
+
+  # --- for reproducibility ----
+  # a seed for each chain
+  seed <- sample(1:1e8,n_chains)
+
+  # ---- priors ------
+  df <- empirical$params
+  # alpha and gamma
+  alpha1.hat <- df$alpha1.hat; gamma.hat <- df$gamma.hat
+  if(is.null(df$alpha1.sd)) {alpha1.sd <- alpha1.hat/6} else {alpha1.sd <- df$alpha1.sd}
+  if(is.null(df$gamma.sd)) {gamma.sd <- gamma.hat/6} else {gamma.sd <- df$gamma.sd}
+
+  # variance parameters
+  if(is.null(df$invgamma.f)) {invgamma.f <- 1} else {invgamma.f <- df$invgamma.f}
+
+  # hyper parameters for mu_tau, var_tau
+  if(length(unique(empirical$k.hat))==1) {
+    mm <- rep(mean(empirical$tau.hat),2); vv <- rep(var(empirical$tau.hat),2)
+  } else {
+    mm <- tapply(empirical$tau.hat, empirical$k.hat, mean)
+    if(!any(table(empirical$k.hat)==1)) {
+      vv <- tapply(empirical$tau.hat, empirical$k.hat, var)
+    } else {
+      vv <- rep(var(empirical$tau.hat),2)
+    }
+  }
+  if(is.null(df$hyper.f)) {hyper.f <- 2} else {
+    hyper.f <- df$hyper.f
+  }
+
+  # t0
+  mu_t0 <- df$t0.hat
+  if(is.null(df$t0.sd)) {t0.sd <- df$t0.hat/3} else {t0.sd <- df$t0.sd}
+  var_t0 <- t0.sd^2
+
+  # lambda
+  if(is.null(df$lambda.lower)) {lambda.lower <- 0} else {lambda.lower <- df$lambda.lower}
+  if(is.null(df$lambda.upper)) {lambda.upper <- 5} else {lambda.upper <- df$lambda.upper}
+
+  # variance
+  sigma.hat.u <- df$sigma.hat.u; sigma.hat.s <- df$sigma.hat.s
+
+  # u0
+  u0min1 <- df$u0min1; u0min2 <- df$u0min2
+  u0max1 <- df$u0max1; u0max2 <- df$u0max2
+
+  # util function
+  show_end <- function(i,mode=c('preparation step','complete step'),time_elapse){
+    system(sprintf('echo "\n%s"', paste(mode,'for chain',i,'completed:',time_elapse)))
+  }
+
+  # ---- run parallel chain ------
+  result <- pbapply::pblapply(1:n_chains, cl=n_cores, function(i){
   # result <- lapply(1:n_chains, function(i){
 
-    # -------------- preparation step ------------
+    tryCatch({
+      # -------------- preparation step ------------
 
-    k.random <- k.inits[,i]
+      k.random <- state_inits[,i]
 
-    # alpha and gamma
-    alpha1.hat <- empirical$params$alpha1.hat; gamma.hat <- empirical$params$gamma.hat
+      # initial tau from random k
+      if(empirical$alpha.type=='avg'){
+        uu.random <- (u.obs-c(alpha1.hat,mean(c(u0min1,u0min2)))[k.random])/(c(mean(c(u0min1,u0min2)),alpha1.hat)[k.random]-c(alpha1.hat,mean(c(u0min1,u0min2)))[k.random])
+      }else{
+        uu.random <- (u.obs-c(alpha1.hat,mean(c(u0min1,u0min2)))[k.random])/(c(mean(c(u0min1,u0min2)),mean(c(u0max1,u0max2)))[k.random]-c(alpha1.hat,mean(c(u0min1,u0min2)))[k.random])
+      }
+      uu.random[uu.random<=0] <- epsilon
+      uu.random[uu.random>=1] <- 1-epsilon
 
-    # hyper parameters for mu_tau, var_tau
-    mm <- tapply(empirical$tau.hat, empirical$k.hat, mean); vv <- tapply(empirical$tau.hat, empirical$k.hat, var)
+      tau.random <- -log(uu.random)
 
-    # t0
-    m_t0 <- empirical$params$t0.hat; var_0 <- t0.sd^2
+      # initial lambda
+      set.seed(seed[i])
+      q_initial <- runif(1, 0, 2)
+      while(q_initial==1 || q_initial==gamma.hat){
+        q_initial <- runif(1, 0, 2)
+      }
 
-    # lambda
-    q_lower <- lambda.lower; q_upper <- lambda.upper
+      start1 <- Sys.time()
+      chain <- hvelo0_mcmc(u_obs=matrix(u.obs,ncol=1), s_obs=matrix(s.obs,ncol=1), niter = prep_niter,
+                           burn_in = prep_burn_in, thinning = prep_thinning,
+                           mu_alpha = alpha1.hat, sig_alpha = alpha1.sd, mu_gamma = gamma.hat, sig_gamma = gamma.sd,
+                           mu_star_base = mm, sig_star_base = hyper.f*mm, eta_base = vv, nu_base = hyper.f*vv,
+                           mu_0 = mu_t0, var_0 = var_t0, q_lower = lambda.lower, q_upper = lambda.upper,
+                           sigma_u_2_hat = sigma.hat.u^2, sigma_s_2_hat = sigma.hat.s^2, invgamma_f = invgamma.f,
+                           u01_lower = u0min1, u01_upper = u0min2,
+                           target_accept = 0.44, verbose=FALSE,
+                           k_fix = k.random, alpha1_1_initial = alpha1.hat, gamma_initial = gamma.hat, tau_initial = tau.random,
+                           mu_tau_initial = mm, var_tau_initial = vv,
+                           t0_initial = max(c(max(tau.random[k.random==1]),mu_t0))+0.1, q_initial = q_initial,
+                           sigma_u_2_initial = sigma.hat.u^2, sigma_s_2_initial = sigma.hat.s^2, u01_initial = mean(c(u0min1, u0min2)))
+      end1 <- Sys.time()
 
-    # variance
-    sigma.hat.u <- empirical$params$sigma.hat.u; sigma.hat.s <- empirical$params$sigma.hat.s
+      if(verbose){
+        if(i == 1){
+          diff_time <- difftime(end1,start1)
+          show_end(i,mode='preparation step',paste(round(diff_time, digits = 3),units(diff_time)))
+        }
+      }
 
-    # u0
-    u0min1 <- empirical$params$u0min1; u0min2 <- empirical$params$u0min2
-    u0max1 <- empirical$params$u0max1; u0max2 <- empirical$params$u0max2
+      # -------------- complete step ---------------
 
-    # initial tau from random k
-    if(empirical$alpha.type=='avg'){
-      uu.random <- (u.obs-c(alpha1.hat,mean(c(u0min1,u0min2)))[k.random])/(c(mean(c(u0min1,u0min2)),alpha1.hat)[k.random]-c(alpha1.hat,mean(c(u0min1,u0min2)))[k.random])
-    }else{
-      uu.random <- (u.obs-c(alpha1.hat,mean(c(u0min1,u0min2)))[k.random])/(c(mean(c(u0min1,u0min2)),mean(c(u0max1,u0max2)))[k.random]-c(alpha1.hat,mean(c(u0min1,u0min2)))[k.random])
-    }
-    uu.random[uu.random<=0] <- epsilon
-    uu.random[uu.random>=1] <- 1-epsilon
+      ind <- seq(1,chain$output_index,by=1)
+      n <- length(u.obs)
 
-    tau.random <- -log(uu.random)
+      # get initials
+      alpha1_1_initial <- mean(chain$alpha1_1_output[ind]); gamma_initial <- mean(chain$gamma_output[ind])
+      q_initial <- mean(sapply(chain$lambda_output[ind], function(l) l[1]))
+      t0_initial <- mean(chain$t0_output[ind]); u01_initial <- mean(chain$u01_output[ind])
+      tau_initial <- sapply(1:n, function(cc) mean(sapply(chain$tau_output[ind], function(l) l[cc])))
+      sigma_u_2_initial <- mean(chain$sigma_u_2_output[ind]);sigma_s_2_initial <- mean(chain$sigma_s_2_output[ind])
 
-    # initial lambda
-    set.seed(seed[i])
-    q_initial <- runif(1, 0.5, 2)
-    while(q_initial==1 || q_initial==gamma.hat){
-      q_initial <- runif(1, 0.5, 2)
-    }
+      mu_tau_initial <- c(mean(sapply(chain$mu_tau_output[ind], function(l) l[1])),
+                          mean(sapply(chain$mu_tau_output[ind], function(l) l[2])))
+      var_tau_initial <- c(mean(sapply(chain$var_tau_output[ind], function(l) l[1])),
+                           mean(sapply(chain$var_tau_output[ind], function(l) l[2])))
 
-    chain <- hvelo0_mcmc(u_obs=matrix(u.obs,ncol=1), s_obs=matrix(s.obs,ncol=1), niter = prep_niter,
-                         burn_in = prep_burn_in, thinning = prep_thinning,
-                         mu_alpha = alpha1.hat, sig_alpha = alpha1.sd, mu_gamma = gamma.hat, sig_gamma = gamma.sd,
-                         mu_star_base = mm, sig_star_base = 2*mm, eta_base = vv, nu_base = 2*vv,
-                         mu_0 = m_t0, var_0 = var_0, q_lower = lambda.lower, q_upper = lambda.upper,
-                         sigma_u_2_hat = sigma.hat.u^2, sigma_s_2_hat = sigma.hat.s^2, invgamma_f = 1,
-                         u01_lower = u0min1, u01_upper = u0min2,
-                         target_accept = 0.44,
-                         k_true = k.random, alpha1_1_initial = alpha1.hat, gamma_initial = gamma.hat, tau_initial = tau.random,
-                         mu_tau_initial = mm, var_tau_initial = vv,
-                         t0_initial = max(c(max(tau.random[k.random==1]),m_t0))+0.1, q_initial = q_initial,
-                         sigma_u_2_initial = sigma.hat.u^2, sigma_s_2_initial = sigma.hat.s^2, u01_initial = mean(c(u0min1, u0min2)))
+      if(max(tau_initial[k.random==1])>=t0_initial){
+        t0_initial <- max(tau_initial[k.random==1])+0.1
+      }
 
-    show_end(i)
-    # -------------- complete step ---------------
+      start2 <- Sys.time()
 
-    ind <- seq(1,chain$output_index,by=1)
-    n <- length(u.obs)
+      set.seed(seed[i]-1)
+      chain2 <- hvelo0_mcmc(u_obs=matrix(u.obs,ncol=1), s_obs=matrix(s.obs,ncol=1), niter = comp_niter,
+                            burn_in = comp_burn_in, thinning = comp_thinning,
+                            mu_alpha = alpha1.hat, sig_alpha = alpha1.sd, mu_gamma = gamma.hat, sig_gamma = gamma.sd,
+                            mu_star_base = mm, sig_star_base = hyper.f*mm, eta_base = vv, nu_base = hyper.f*vv,
+                            mu_0 = mu_t0, var_0 = var_t0, q_lower = lambda.lower, q_upper = lambda.upper,
+                            sigma_u_2_hat = sigma.hat.u^2, sigma_s_2_hat = sigma.hat.s^2, invgamma_f = invgamma.f,
+                            u01_lower = u0min1, u01_upper = u0min2,
+                            target_accept = 0.44, verbose=FALSE,
+                            k_initial = k.random, alpha1_1_initial = alpha1_1_initial, gamma_initial = gamma_initial, tau_initial = tau_initial,
+                            p_initial = mean(k.random==1), mu_tau_initial = mu_tau_initial, var_tau_initial = var_tau_initial,
+                            t0_initial = t0_initial, q_initial = q_initial, sigma_u_2_initial = sigma_u_2_initial, sigma_s_2_initial = sigma_s_2_initial,
+                            u01_initial = u01_initial)
 
-    # get initials
-    alpha1_1_initial <- mean(chain$alpha1_1_output[ind]); gamma_initial <- mean(chain$gamma_output[ind])
-    q_initial <- mean(sapply(chain$lambda_output[ind], function(l) l[1]))
-    t0_initial <- mean(chain$t0_output[ind]); u01_initial <- mean(chain$u01_output[ind])
-    tau_initial <- sapply(1:n, function(cc) mean(sapply(chain$tau_output[ind], function(l) l[cc])))
-    sigma_u_2_initial <- mean(chain$sigma_u_2_output[ind]);sigma_s_2_initial <- mean(chain$sigma_s_2_output[ind])
+      end2 <- Sys.time()
+      if(verbose){
+        if(i == 1){
+          diff_time <- difftime(end2,start2)
+          show_end(i,mode='complete step',paste(round(diff_time, digits = 3),units(diff_time)))
+        }
+      }
 
-    mu_tau_initial <- c(mean(sapply(chain$mu_tau_output[ind], function(l) l[1])),
-                        mean(sapply(chain$mu_tau_output[ind], function(l) l[2])))
-    var_tau_initial <- c(mean(sapply(chain$var_tau_output[ind], function(l) l[1])),
-                         mean(sapply(chain$var_tau_output[ind], function(l) l[2])))
+      return(chain2)
+    }, error = function(e){
+      system(sprintf('echo "\n%s"', paste('Caught an error! Check the output for info')))
+      return(paste('Error:',e))
+    },
+    warning = function(w){
+      system(sprintf('echo "\n%s"', paste('Caught a warning! Check the output for info')))
+      return(paste('Warning:',w))
+    })
 
-    if(max(tau_initial[k.random==1])>=t0_initial){
-      t0_initial <- max(tau_initial[k.random==1])+0.1
-    }
-
-    set.seed(seed[i]-1)
-    chain2 <- hvelo0_mcmc(u_obs=matrix(u.obs,ncol=1), s_obs=matrix(s.obs,ncol=1), niter = comp_niter,
-                          burn_in = comp_burn_in, thinning = comp_thinning,
-                          mu_alpha = alpha1.hat, sig_alpha = alpha1.sd, mu_gamma = gamma.hat, sig_gamma = gamma.sd,
-                          mu_star_base = mm, sig_star_base = 2*mm, eta_base = vv, nu_base = 2*vv,
-                          mu_0 = m_t0, var_0 = var_0, q_lower = lambda.lower, q_upper = lambda.upper,
-                          sigma_u_2_hat = sigma.hat.u^2, sigma_s_2_hat = sigma.hat.s^2, invgamma_f = 1,
-                          u01_lower = u0min1, u01_upper = u0min2,
-                          target_accept = 0.44,
-                          k_initial = k.random, alpha1_1_initial = alpha1_1_initial, gamma_initial = gamma_initial, tau_initial = tau_initial,
-                          p_initial = mean(k.random==1), mu_tau_initial = mu_tau_initial, var_tau_initial = var_tau_initial,
-                          t0_initial = t0_initial, q_initial = q_initial, sigma_u_2_initial = sigma_u_2_initial, sigma_s_2_initial = sigma_s_2_initial,
-                          u01_initial = u01_initial)
-
-
-  # })
-  }, cl = n_cores)
+  })
 
   return(result)
 
@@ -183,9 +253,11 @@ velo_consens <- function(u.obs, s.obs, k.inits, empirical, epsilon=1e-3,
 #'
 #' @import ggplot2
 #'
-#' @param Ws a vector of candidate values for widths (number of chains).
-#' @param Ds either an integer or a vector of integers. Absolute differences will be computed for each value in \code{Ds}.
-#' @param mcmc_k a list, each corresponding to the samples of k from a single chain.
+#' @param Ws a vector of candidate values for widths in an increasing order (number of chains).
+#' @param Ds either an integer or a vector of integers (in an increasing order). Absolute differences will be computed for each value in \code{Ds}.
+#' @param Ds_label labels of depths in the plot. In case there is thinning or burnin, \code{Ds} should be the index in the saved samples,
+#' and \code{Ds_label} should be the original index in the whole sampling process. Should be of the same length as Ds.
+#' @param mcmc_k a list, each corresponding to the (saved) samples of k from a single chain.
 #'
 #' @return If \code{Ds} is an integer, a line plot showing absolute difference in entropy between different widths.
 #' If \code{Ds} is a vector, for each value in \code{Ds} a line will be plotted.
@@ -195,11 +267,13 @@ velo_consens <- function(u.obs, s.obs, k.inits, empirical, epsilon=1e-3,
 #' @examples
 #' Ws <- c(1, 2, 3)
 #' plot_entropy(Ws = Ws, Ds = 500, mcmc_k = mcmc_k_result)
-plot_entropy <- function(Ws, Ds, mcmc_k){
+plot_entropy <- function(Ws, Ds, Ds_label=NULL, mcmc_k){
 
+  if(!is.null(Ds_label) & (length(Ds)!=length(Ds_label))) {stop("Ds and Ds_label should be of the same length")}
+  if(is.null(Ds_label)) {Ds_label=Ds}
   # Entropy
-  # ---- a list of length = no of different D, each is a matrix of max(W)*n_obs ----
-  # depend on values in D and max(W)
+  # ---- a list of length = no of different D, each is a matrix of total_number_of_chain*n_obs ----
+  # depend on values in D
   k_mat_list_by_d <- lapply(Ds, function(d) {
     t(sapply(mcmc_k, function(k_output) {
       k_result <- k_output[[d]]
@@ -210,42 +284,33 @@ plot_entropy <- function(Ws, Ds, mcmc_k){
   # within the list of list is a vector recording p(induction) for every cell
 
   # depend on the values in D and W
-
-  cms_list <- NULL
+  prob_list <- NULL
   for (i in 1:length(Ws)) {
-    cms_list[[i]] <- lapply(1:length(Ds), function(j) {
+    prob_list[[i]] <- lapply(1:length(Ds), function(j) {
       if(Ws[i]==1) {
         vec <-  ifelse(k_mat_list_by_d[[j]][1,]==1, 1, 0)
       }else{
-        vec <-  apply(k_mat_list_by_d[[j]][1:Ws[i],], 2, function(x) mean(x==1))
+        vec <-  colMeans(k_mat_list_by_d[[j]][1:Ws[i],]==1)
       }
       return(vec)
     })
   }
 
-  entropy_vec_w <- data.frame(tidyr::expand_grid(Ws,Ds,entropy=NA))
+  entropy_vec_w <- data.frame(tidyr::expand_grid(Ws,Ds=Ds_label,entropy=NA))
   entropy_vec_w$entropy <- apply(entropy_vec_w, 1, function(vec) {
     i <- which(Ws==vec[1])
-    j <- which(Ds==vec[2])
+    j <- which(Ds_label==vec[2])
 
-    p_c <- cms_list[[i]][[j]]
+    p_c <- prob_list[[i]][[j]]
 
-    entropy <- sapply(p_c, function(p) {
-      if(p==1 || p==0){
-        val <- 0
-      }else{
-        val <- -(p*log(p)+(1-p)*log(1-p))
-      }
-
-      return(val)
-    })
+    entropy <- ifelse((p_c==0) | (p_c==1), 0, -(p_c*log(p_c)+(1-p_c)*log(1-p_c)))
 
     return(sum(entropy))
   })
 
   entropy_vec_w$AD_entropy <-  apply(entropy_vec_w, 1, function(vec) {
     i <- which(Ws==vec[1])
-    j <- which(Ds==vec[2])
+    j <- which(Ds_label==vec[2])
 
     if(i==1) {
       return(NA)

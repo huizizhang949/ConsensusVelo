@@ -13,7 +13,7 @@
 
 <meta name="date" content="2024-06-14" />
 
-<title>demo</title>
+<title>ConsensusVelo</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -350,17 +350,15 @@ display: none;
 
 
 
-<h1 class="title toc-ignore">demo</h1>
+<h1 class="title toc-ignore">ConsensusVelo</h1>
 <h4 class="author">Huizi Zhang</h4>
 <h4 class="date">2024-06-14</h4>
 
 </div>
 
 
-<div id="a-demo-to-show-how-to-use-the-consensusvelo-package" class="section level1">
-<h1>A demo to show how to use the ConsensusVelo package</h1>
-<div id="example---fit-a-single-gene" class="section level2">
-<h2>Example - Fit a single gene</h2>
+<div id="example---fit-a-single-gene" class="section level1">
+<h1>Example - Fit a single gene</h1>
 <pre class="r"><code>library(ggplot2)
 library(pheatmap)
 library(ConsensusVelo)</code></pre>
@@ -385,8 +383,8 @@ k.inits2 &lt;- generate_k(u.obs = u.obs, s.obs = s.obs, empirical = empirical, n
 set.seed(234)
 rand_ind &lt;- sample(1:100,size=100)
 k.inits &lt;- cbind(k.inits1,k.inits2)[,rand_ind]</code></pre>
-<div id="consensus-velocity" class="section level3">
-<h3>Consensus velocity</h3>
+<div id="consensus-velocity" class="section level2">
+<h2>Consensus velocity</h2>
 <p>Now to run consensus velocity:</p>
 <pre class="r"><code># consensus velocity (in parallel: 3 cores)
 # number of chains
@@ -394,22 +392,31 @@ Width &lt;- 50
 # number of iterations
 Depth &lt;- 5000
 
-# set up the seed for each chain
-set.seed(4343)
-seed &lt;- sample(1:1e5,size=Width)
-consensus_result &lt;- velo_consens(u.obs = u.obs, s.obs = s.obs, k.inits = k.inits, empirical = empirical,
-                                 epsilon = 1e-3, alpha1.sd = 5, gamma.sd = 0.4, t0.sd = 3, 
-                                 lambda.lower = 0.3, lambda.upper = 8, seed = seed, 
-                                 prep_niter = 10, prep_burn_in = 0, prep_thinning = 1,
-                                 comp_niter = Depth, comp_burn_in = 0, comp_thinning = 1, 
-                                 n_cores = 3, n_chains = Width)</code></pre>
+# define other prior parameters, if not provided, default values will be used
+# standard deviations of alpha1, gamma and switching point
+empirical$params$alpha1.sd=5
+empirical$params$gamma.sd=0.4
+empirical$params$t0.sd=3
+# upper and lower bound of lambda
+empirical$params$lambda.lower=0; empirical$params$lambda.upper=5
+# the parameter in the inverse-gamma prior for the two variance parameters: IG(invgamma.f, invgamma.f * empirical)
+empirical$params$invgamma.f=1
+# the parameter in the prior for mu_tau (also for var_tau), control the variance: TruncN(mean, (hyper.f*mean)^2)
+empirical$params$hyper.f=2
+
+# mcmc setup (if not provided, default values will be used)
+mcmc_list &lt;- list(prep_niter = 1000, prep_burn_in = 500, prep_thinning = 1,
+                  comp_niter = Depth, comp_burn_in = 0, comp_thinning = 1)
+
+set.seed(1)
+consensus_result &lt;- velo_consens(u.obs = u.obs, s.obs = s.obs, state_inits = k.inits, empirical = empirical,
+                                 mcmc = mcmc_list, epsilon = 1e-3, n_cores = 3, n_chains = Width)</code></pre>
 <p>To select a suitable value for <span class="math inline">\(W\)</span>
 and <span class="math inline">\(D\)</span> (number of chains and number
 of iterations), we compute entropy and moving average of log-posterior
 density:</p>
 <pre class="r"><code># get posterior samples for k and log-posterior
 k_lp_result &lt;- lapply(consensus_result, function(l) {
-
   return(list(k=l$k_output,lp=l$log_post))
 })
 # a list, each corresponding to the samples of k from a single chain
@@ -422,7 +429,7 @@ rm(k_lp_result)
 Ws &lt;- c(1, 5, seq(10,50,by=5))
 
 # plot absolute difference in entropy, conditional on a fixed D (or several Ds).
-plot_entropy(Ws = Ws, Ds = 500, mcmc_k = mcmc_k_result)
+plot_entropy(Ws = Ws, Ds = 5000, mcmc_k = mcmc_k_result)
 
 # candidate values for D
 Ds &lt;- c(1, seq(500,5000,by=500))
@@ -473,8 +480,8 @@ pairwise parameters:</p>
 plot_distribution_2d(combined_result = combined, param1 = &#39;t0&#39;, param2 = &#39;gamma&#39;)
 plot_distribution_2d(combined_result = combined, param1 = &#39;t0&#39;, param2 = &#39;t[100]&#39;)</code></pre>
 </div>
-<div id="posterior-predictive-checks" class="section level3">
-<h3>Posterior predictive checks</h3>
+<div id="posterior-predictive-checks" class="section level2">
+<h2>Posterior predictive checks</h2>
 <p>We preform posterior predictive checks by generating replicated
 datasets and compare them to the observed data to see if there is any
 obvious discrepancy. Specifically, we generate a single dataset to
@@ -491,17 +498,18 @@ ppc_single(u.obs = u.obs, s.obs = s.obs, combined_result = combined)
 # --- multiple replicates -----
 # compare empirical gamma and quantiles
 set.seed(4)
-ppc_multiple(u.obs = u.obs, s.obs = s.obs, combined_result = combined, n_replicate = 1000, prob = c(0.005,0.995),
+ppc_multiple(u.obs = u.obs, s.obs = s.obs, combined_result = combined, n_replicate = 200, prob = 0.95,
+             quantiles=seq(0.05,0.95,by=0.05),
              u.quant = c(0.35,0.8), s.quant = c(0.35,0.8), gamma.hat.obs = empirical$params$gamma.hat)
 
 # the function plots histograms for ppp values and also outputs them, using mixed predictive distribution
 set.seed(134)
-ppp_values &lt;- ppp_mixed(u.obs = u.obs, s.obs = s.obs, combined_result = combined, n_replicate = 1000, prob = 0.9)</code></pre>
+ppp_values &lt;- ppp_mixed(u.obs = u.obs, s.obs = s.obs, combined_result = combined, n_replicate = 200, prob = 0.9)</code></pre>
 </div>
 </div>
-<div id="example---a-post-processing-step-to-infer-a-gene-shared-latent-time" class="section level2">
-<h2>Example - A post-processing step to infer a gene-shared latent
-time</h2>
+<div id="example---a-post-processing-step-to-infer-a-gene-shared-latent-time" class="section level1">
+<h1>Example - A post-processing step to infer a gene-shared latent
+time</h1>
 <p>After fitting each gene, we can implement a post-processing step to
 estimate a gene-shared latent time, using posterior summaries from
 individual gene fit.</p>
@@ -518,7 +526,7 @@ var.logt &lt;- post.summary$var.logt; p.hat &lt;- post.summary$p.hat</code></pre
 <pre class="r"><code># the post-processing step is implemented using rjags
 # the output is a list of length = n_chains, within each list is a matrix
 # the row corresponds to each iteration, columns correspond to variables (mu_c, sigma_2_c, rho_c, b=-log(beta))
-post_result &lt;- mcmc_shared_time(x = y, k.mode = k.mode, var.logt = var.logt, p.hat = p.hat, n_chains = 3,
+post_result &lt;- mcmc_shared_time(x = x, k.mode = k.mode, var.logt = var.logt, p.hat = p.hat, n_chains = 3,
                                 niter = 200, burn_in = 100, thinning = 1)</code></pre>
 <p>Convergence of the chains can be checked by</p>
 <pre class="r"><code>par(mfrow=c(4,2))
@@ -559,7 +567,6 @@ velocity_pca(combined_all_genes = combined_all_genes, post_result = post_result,
              groups = rep(c(&#39;blue&#39;,&#39;yellow&#39;),each=200),
              u.obs = u.obs, s.obs = s.obs,
              obs_ind = seq(40,400,by=40), thinning = 1, cex = 0.2)</code></pre>
-</div>
 </div>
 
 

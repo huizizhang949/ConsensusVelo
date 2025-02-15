@@ -52,7 +52,8 @@ ppc_single <- function(u.obs, s.obs, combined_result){
 #' @param s.obs a vector of observed spliced counts.
 #' @param combined_result output from \code{result_combine}.
 #' @param n_replicate number of replicates.
-#' @param prob the target probability content of the credible interval.
+#' @param prob the target probability of the credible interval.
+#' @param quantiles a vector of quantiles to compare between the replicates and true data.
 #' @param u.quant,s.quant a vector of two values for lower and upper quantiles to find
 #' empirical repression and induction steady states for unspliced and spliced counts. Should be the same as used in \code{get_empirical}.
 #' @param gamma.hat.obs empirical \eqn{\gamma} from the observed data.
@@ -69,9 +70,10 @@ ppc_single <- function(u.obs, s.obs, combined_result){
 #' @examples
 #' set.seed(4)
 #' ppc_multiple(u.obs = u.obs, s.obs = s.obs, combined_result = combined,
-#'   n_replicate = 1000, prob = c(0.005,0.995), u.quant = c(0.35,0.8),
-#'   s.quant = c(0.35,0.8), gamma.hat.obs = empirical$params$gamma.hat)
-ppc_multiple <- function(u.obs, s.obs, combined_result, n_replicate, prob = c(0.005,0.995),
+#'   n_replicate = 1000, prob = 0.95, quantiles=seq(0.05,0.95,by=0.05),
+#'   u.quant = c(0.35,0.8), s.quant = c(0.35,0.8), gamma.hat.obs = empirical$params$gamma.hat)
+ppc_multiple <- function(u.obs, s.obs, combined_result, n_replicate, prob = 0.95,
+                         quantiles=seq(0.05,0.95,by=0.05),
                          u.quant = c(0.35,0.8), s.quant = c(0.35,0.8), gamma.hat.obs){
 
   n <- length(u.obs)
@@ -91,9 +93,9 @@ ppc_multiple <- function(u.obs, s.obs, combined_result, n_replicate, prob = c(0.
   u.rep <- t(sapply(ix,function(ii) truncnorm::rtruncnorm(n,a=0,b=Inf,mean=combined_result_u[ii,],sd = sqrt(combined_result_params[ii,'sigma_u_2']))))
   s.rep <- t(sapply(ix,function(ii) truncnorm::rtruncnorm(n,a=0,b=Inf,mean=combined_result_s[ii,],sd = sqrt(combined_result_params[ii,'sigma_s_2']))))
 
-  # quantiles from the replicates
-  u.rep.quant <- apply(u.rep,2,quantile,p=prob)
-  s.rep.quant <- apply(s.rep,2,quantile,p=prob)
+  # HPD from the replicates
+  u.rep.quant <- t(coda::HPDinterval(coda::mcmc(u.rep), prob = prob))
+  s.rep.quant <- t(coda::HPDinterval(coda::mcmc(s.rep), prob = prob))
 
   # find cells whose quantiles of replicates do not cover observed values
   # and plot
@@ -109,13 +111,13 @@ ppc_multiple <- function(u.obs, s.obs, combined_result, n_replicate, prob = c(0.
     ccs <- which(u.obs>u.rep.quant[2,]|u.obs<u.rep.quant[1,])
     plot(1:length(ccs),u.obs[ccs],ylim=c(0,max(u.obs[ccs])*1.2),xlab='Index',ylab='u',pch=20,cex=0.7,main='u')
     for(i in 1:length(ccs)){
-      lines(rep(i,2),quantile(u.rep[,ccs[i]],p=prob),col='grey')
+      lines(rep(i,2),coda::HPDinterval(coda::mcmc(u.rep[,ccs[i]]),prob=prob),col='grey')
     }
     # for s
     ccs <- which(s.obs>s.rep.quant[2,]|s.obs<s.rep.quant[1,])
     plot(1:length(ccs),s.obs[ccs],ylim=c(0,max(s.obs[ccs])*1.2),xlab='Index',ylab='s',pch=20,cex=0.7,main='s')
     for(i in 1:length(ccs)){
-      lines(rep(i,2),quantile(s.rep[,ccs[i]],p=prob),col='grey')
+      lines(rep(i,2),coda::HPDinterval(coda::mcmc(s.rep[,ccs[i]]),prob=prob),col='grey')
     }
 
   }
@@ -132,13 +134,13 @@ ppc_multiple <- function(u.obs, s.obs, combined_result, n_replicate, prob = c(0.
   })
 
   # quantiles
-  quant.obs.u <- quantile(u.obs,p=seq(0.05,0.95,by=0.05))
+  quant.obs.u <- quantile(u.obs,p=quantiles)
   quant.rep.u <- lapply(1:n_replicate, function(ii) {
-    quantile(u.rep[ii,],p=seq(0.05,0.95,by=0.05))
+    quantile(u.rep[ii,],p=quantiles)
   })
-  quant.obs.s <- quantile(s.obs,p=seq(0.05,0.95,by=0.05))
+  quant.obs.s <- quantile(s.obs,p=quantiles)
   quant.rep.s <- lapply(1:n_replicate, function(ii) {
-    quantile(s.rep[ii,],p=seq(0.05,0.95,by=0.05))
+    quantile(s.rep[ii,],p=quantiles)
   })
 
 

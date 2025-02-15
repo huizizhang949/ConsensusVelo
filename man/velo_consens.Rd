@@ -4,7 +4,7 @@
 \alias{velo_consens}
 \title{Implement consensus velocity for inference of a single gene}
 \usage{
-velo_consens(u.obs, s.obs, k.inits, empirical, epsilon=1e-3, alpha1.sd, gamma.sd, t0.sd,
+velo_consens(u.obs, s.obs, state_inits, empirical, epsilon=1e-3, alpha1.sd, gamma.sd, t0.sd,
    lambda.lower=0, lambda.upper=8, seed, prep_niter, prep_burn_in=0, prep_thinning=1,
    comp_niter, comp_burn_in=0, comp_thinning=1, n_cores=30, n_chains=100)
 }
@@ -13,20 +13,18 @@ velo_consens(u.obs, s.obs, k.inits, empirical, epsilon=1e-3, alpha1.sd, gamma.sd
 
 \item{s.obs}{a vector of observed spliced counts.}
 
-\item{k.inits}{a matrix of initial values for the state. Each column corresponds to one set of initial values, with rows corresponding to cells.
+\item{state_inits}{a matrix of initial values for the state. Each column corresponds to one set of initial values, with rows corresponding to cells.
 Can use the output from \code{generate_k}.}
 
 \item{empirical}{output from \code{get_empirical}.}
 
 \item{epsilon}{a small positive value used to compute empirical \eqn{\tau}. Better to use the same value as used in \code{get_empirical}.}
 
-\item{alpha1.sd}{standard deviation in the truncated normal prior for \eqn{\alpha_1^{(1)}}.}
+\item{n_cores}{number of cores used for parallel computing.}
 
-\item{gamma.sd}{standard deviation in the truncated normal prior for \eqn{\gamma}.}
+\item{n_chains}{number of chains to run.}
 
-\item{t0.sd}{standard deviation in the Gamma prior for the switching point \eqn{t_0^{(2)}}.}
-
-\item{lambda.lower, lambda.upper}{the lower and upper bound in the Uniform prior for \eqn{\lambda}.}
+\item{verbose}{if TRUE, print the running time for the preparation step and complete algorithm for the first chain.}
 
 \item{seed}{a vector of values used as seed for each chain. Must be of the same length as the number of chains.}
 
@@ -35,10 +33,6 @@ Can use the output from \code{generate_k}.}
 \item{prep_burn_in, comp_burn_in}{the length of burn-in period during MCMC for the preparation step and complete step.}
 
 \item{prep_thinning, comp_thinning}{the thinning applied after burn-in period for the preparation step and complete step.}
-
-\item{n_cores}{number of cores used for parallel computing.}
-
-\item{n_chains}{number of chains to run.}
 }
 \value{
 The output is a list of results for all chains. Within each list, it contains the following components for each chain:
@@ -71,11 +65,9 @@ The function runs multiple chains in parallel to infer unknown parameters for a 
 including a preparation step to find good initial values where states are fixed to empirical values.
 }
 \examples{
-set.seed(4343)
-seed <- sample(1:1e5,size=Width)
-consensus_result <- velo_consens(u.obs = u.obs, s.obs = s.obs,
-  k.inits = k.inits, empirical = empirical, epsilon = 1e-3, alpha1.sd = 5,
-  gamma.sd = 0.4, t0.sd = 3, lambda.lower = 0.3, lambda.upper = 8,
-  seed = seed, prep_niter = 10, prep_burn_in = 0, prep_thinning = 1,
-  comp_niter = Depth, comp_burn_in = 0, comp_thinning = 1, n_cores = 3, n_chains = Width)
+mcmc_list <- list(prep_niter = 1000, prep_burn_in = 500, prep_thinning = 1,
+    comp_niter = Depth, comp_burn_in = 0, comp_thinning = 1)
+set.seed(1)
+consensus_result <- velo_consens(u.obs = u.obs, s.obs = s.obs, state_inits = k.inits,
+   empirical = empirical,mcmc = mcmc_list, epsilon = 1e-3, n_cores = 3, n_chains = Width)
 }

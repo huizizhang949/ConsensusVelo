@@ -15,7 +15,15 @@
 #' @param state_inits a matrix of initial values for the state. Each column corresponds to one set of initial values, with rows corresponding to cells.
 #' Can use the output from \code{generate_k}.
 #' @param empirical output from \code{get_empirical}.
-#' @param mcmc a list of mcmc setup: number of iterations, thinning and burnin for the preparation step and complete algorithm.
+#' @param mcmc a list of mcmc setup: :
+#' \itemize{
+#'  \item \code{prep_niter} number of iterations in the preparation step where the state is fixed.
+#'  \item \code{prep_burn_in} number of iterations to discard as burn-in in the preparation step.
+#'  \item \code{prep_thinning} after burn-in in the preparation step, save the sample at every \code{thinning} iterations.
+#'  \item \code{comp_niter} number of iterations in the full algorithm.
+#'  \item \code{comp_burn_in} number of iterations to discard as burn-in in the full algorithm.
+#'  \item \code{comp_thinning} after burn-in in the full algorithm, save the sample at every \code{thinning} iterations.
+#' }
 #' @param epsilon a small positive value used to compute empirical \eqn{\tau}. Better to use the same value as used in \code{get_empirical}.
 #' @param n_chains number of chains to run. Default to run the same number as the provided \code{state_inits}.
 #' @param n_cores number of cores used for parallel computing.

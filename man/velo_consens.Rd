@@ -27,7 +27,15 @@ Can use the output from \code{generate_k}.}
 
 \item{empirical}{output from \code{get_empirical}.}
 
-\item{mcmc}{a list of mcmc setup: number of iterations, thinning and burnin for the preparation step and complete algorithm.}
+\item{mcmc}{a list of mcmc setup: :
+\itemize{
+ \item \code{prep_niter} number of iterations in the preparation step where the state is fixed.
+ \item \code{prep_burn_in} number of iterations to discard as burn-in in the preparation step.
+ \item \code{prep_thinning} after burn-in in the preparation step, save the sample at every \code{thinning} iterations.
+ \item \code{comp_niter} number of iterations in the full algorithm.
+ \item \code{comp_burn_in} number of iterations to discard as burn-in in the full algorithm.
+ \item \code{comp_thinning} after burn-in in the full algorithm, save the sample at every \code{thinning} iterations.
+}}
 
 \item{epsilon}{a small positive value used to compute empirical \eqn{\tau}. Better to use the same value as used in \code{get_empirical}.}
 

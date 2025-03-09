@@ -22,6 +22,7 @@ The simulated data for fitting a single gene can be obtained from
 
 ```{r}
 # sim.data contains the generated observations for a single gene
+data("sim.data")
 u.obs <- sim.data$u.obs; s.obs <- sim.data$s.obs
 ```
 
@@ -37,17 +38,15 @@ Before running consensus velocity algorithm, we need to prepare different initia
 ```{r}
 # generate multiple initial values for state k
 # first type (based on the distance to the centre points of two states)
-set.seed(231)
-k.inits1 <- generate_k(u.obs = u.obs, s.obs = s.obs, empirical = empirical, n_inits = 50, type = 'centre')
-
 # second type (based on the distance to the closest points of two states)
-set.seed(7439)
-k.inits2 <- generate_k(u.obs = u.obs, s.obs = s.obs, empirical = empirical, n_inits = 50, type = 'min')
-
-# combine and shuffle
-set.seed(234)
-rand_ind <- sample(1:100,size=100)
-k.inits <- cbind(k.inits1,k.inits2)[,rand_ind]
+set.seed(43)
+k.inits <- replicate(50, {
+  if(runif(1) > 0.5){
+    c(generate_k(u.obs = u.obs, s.obs = s.obs, empirical = empirical, n_inits = 1, type = 'centre', plot=FALSE))
+  }else{
+    c(generate_k(u.obs = u.obs, s.obs = s.obs, empirical = empirical, n_inits = 1, type = 'min', plot=FALSE))
+  }
+})
 ```
 
 ## Consensus velocity
@@ -73,7 +72,10 @@ empirical$params$invgamma.f=1
 ## the parameter in the prior for mu_tau (also for var_tau), control the variance: TruncN(mean, (hyper.f*mean)^2)
 empirical$params$hyper.f=2
 
-# mcmc setup (if not provided, default values will be used)
+# mcmc setup, if not provided, the following default values will be used:
+# df <- empirical$params
+# alpha1.sd <- df$alpha1.hat/6; gamma.sd <- df$gamma.hat/6; t0.sd <- df$t0.hat/3; 
+# lambda.lower <- 0; lambda.upper <- 5; invgamma.f <- 1; hyper.f <- 2
 mcmc_list <- list(prep_niter = 3000, prep_burn_in = 2000, prep_thinning = 1,
                   comp_niter = Depth, comp_burn_in = 0, comp_thinning = 1)
 
@@ -96,7 +98,7 @@ mcmc_lp_result <- t(sapply(k_lp_result,function(l) l$lp))
 rm(k_lp_result)
 
 # candidate values for W
-Ws <- c(1, 5, seq(10,50,by=5))
+Ws <- 1:50
 
 # plot absolute difference in entropy, conditional on a fixed D (or several Ds).
 plot_entropy(Ws = Ws, Ds = 5000, mcmc_k = mcmc_k_result)
@@ -190,15 +192,50 @@ summaries from individual gene fit.
 
 ```{r}
 # we show an example on 26 genes with 400 cells. The data is stored in a cell-by-gene matrix
+data("post.summary")
 u.obs <- post.summary$u.obs; s.obs <- post.summary$s.obs
-# the posterior summaries for can be obtained as follows
-# x - a cell-by-gene matrix. Each entry is the posterior mean of log gene-wise latent time, conditional on the state with a larger posterior probability (stored in k.mode).
+# the posterior summaries for simulated data are saved as:
+# x - a cell-by-gene matrix. Each entry is the posterior mean of log gene-specific latent time, conditional on the state with a larger posterior probability (stored in k.mode).
 # k.mode - a cell-by-gene matrix. Each entry is the state (induction: 1, repression: 2) with a larger posterior probability.
-# var.logt - an array [cell, gene, state] of posterior variance of log gene-wise latent time, for each state.
+# var.logt - an array [cell, gene, state] of posterior variance of log gene-specific latent time, for each state.
 # p.hat - an array [cell, gene, state] of posterior probability of belonging to each state for each cell in each gene.
 x <- post.summary$x; k.mode <- post.summary$k.mode
 var.logt <- post.summary$var.logt; p.hat <- post.summary$p.hat
 
+# below is the code to obtain these summaries for a single gene
+# # posterior samples for k and t can be obtained via
+# combined_result_t <- do.call(rbind, lapply(combined, function(l) l$t))
+# combined_result_k <- do.call(rbind, lapply(combined, function(l) l$k))
+# 
+# # number of cells and number of total MCMC samples
+# n <- ncol(combined_result_t); N <- nrow(combined_result_t)
+# 
+# # get posterior summaries
+# mean.logt = array(NA,dim=c(n,2))
+# var.logt = array(NA,dim=c(n,2))
+# k.samples = array(NA,dim=c(n,N))
+# p.hat = array(NA,dim=c(n,2))
+# 
+# # posterior probability of each state
+# p.hat[,1] <- apply(combined_result_k,2,function(x) mean(x==1))
+# p.hat[,2] <- apply(combined_result_k,2,function(x) mean(x==2))
+# 
+# # conditional mean and variance for log(t)
+# for(k in 1:2){
+#   mean.logt[,k] <- sapply(1:n,function(cc) {
+# 
+#     mean(log(combined_result_t[combined_result_k[,cc]==k,cc]))
+# 
+#   })
+# 
+#   var.logt[,k] <- sapply(1:n,function(cc) {
+# 
+#     var(log(combined_result_t[combined_result_k[,cc]==k,cc]))
+# 
+#   })
+# }
+# x <- ifelse(p.hat[,1]>0.5, mean.logt[,1], mean.logt[,2])
+# k.mode <- ifelse(p.hat[,1]>0.5, 1, 2)
 ```
 
 The model can be fitted through the following:

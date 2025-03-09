@@ -71,11 +71,12 @@ empirical$params$lambda.lower=0; empirical$params$lambda.upper=5
 empirical$params$invgamma.f=1
 ## the parameter in the prior for mu_tau (also for var_tau), control the variance: TruncN(mean, (hyper.f*mean)^2)
 empirical$params$hyper.f=2
-
-# mcmc setup, if not provided, the following default values will be used:
+## default values are:
 # df <- empirical$params
 # alpha1.sd <- df$alpha1.hat/6; gamma.sd <- df$gamma.hat/6; t0.sd <- df$t0.hat/3; 
 # lambda.lower <- 0; lambda.upper <- 5; invgamma.f <- 1; hyper.f <- 2
+
+# mcmc setup (if not provided, default values will be used)
 mcmc_list <- list(prep_niter = 3000, prep_burn_in = 2000, prep_thinning = 1,
                   comp_niter = Depth, comp_burn_in = 0, comp_thinning = 1)
 
